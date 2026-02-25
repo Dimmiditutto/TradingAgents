@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: trading-agents
+    runtime: python
+    pythonVersion: "3.11"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "chainlit run app.py"
+    envVars:
+      - key: OPENAI_API_KEY
+        scope: build,runtime
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        scope: build,runtime
+        sync: false
+    disk:
+      - name: reports
+        mountPath: /var/data/reports
+      - name: dashboards
+        mountPath: /var/data/dashboards
