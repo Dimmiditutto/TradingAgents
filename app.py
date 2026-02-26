@@ -3,21 +3,54 @@ TradingAgents - App Web Interattiva con Chainlit
 Interfaccia completa con Dashboard, Report e Grafici
 """
 
-import chainlit as cl
+import sys
+import os
 from pathlib import Path
+
+# Aggiungi parent directory al PYTHONPATH per trovare i moduli
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
+import chainlit as cl
 from datetime import datetime
 from typing import Optional, Dict, Any
-import os
 from dotenv import load_dotenv
 
 # Carica variabili d'ambiente
 load_dotenv()
+
+# Verifica che almeno una API key sia configurata
+api_key_openai = os.getenv("OPENAI_API_KEY")
+api_key_anthropic = os.getenv("ANTHROPIC_API_KEY")
+api_key_google = os.getenv("GOOGLE_API_KEY")
+
+if not any([api_key_openai, api_key_anthropic, api_key_google]):
+    print("\n" + "=" * 80)
+    print("❌ ERRORE: Nessuna API key configurata!")
+    print("=" * 80)
+    print("\nPer usare TradingAgents, devi configurare almeno una API key.")
+    print("\n📖 Leggi il file: SETUP_API_KEYS.md")
+    print("\nPassi rapidi:")
+    print("  1. Vai a https://platform.openai.com/api-keys")
+    print("  2. Genera una API key")
+    print("  3. Apri /workspaces/TradingAgents/web/.env")
+    print("  4. Aggiungi: OPENAI_API_KEY=sk-...")
+    print("  5. Salva il file")
+    print("  6. Riavvia Chainlit")
+    print("\n" + "=" * 80 + "\n")
+    # Non voglio crashare la app, lascia che l'utente la avvii comunque
+    # e poi veda il messaggio di errore quando fa il primo comando
 
 # Import TradingAgents
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.utils.report_generator import ReportGenerator
 from tradingagents.utils.dashboard import DashboardGenerator
+
+# Import della configurazione Chainlit
+from chainlit_config import collect_parameters
 
 # Configurazione
 config = DEFAULT_CONFIG.copy()
@@ -34,31 +67,34 @@ dashboard_gen = DashboardGenerator(output_dir="./dashboards")
 
 # Istanza globale TradingAgents
 ta = None
+user_config = None  # Configurazione dell'utente
 
 
 @cl.on_chat_start
 async def start():
     """Inizializzazione dell'app"""
-    global ta
+    global ta, user_config
     
-    # Inizializza TradingAgents
+    # Inizializza TradingAgents con config di default
     ta = TradingAgentsGraph(debug=False, config=config)
     
     # Messaggio di benvenuto
-    await cl.Message(
-        content="""
+    welcome_msg = """
 🚀 **Benvenuto in TradingAgents!**
 
 Sistema automatico di analisi trading con intelligenza artificiale multi-agente.
 
 📚 **Come usarlo:**
-Inserisci il comando nel formato:
-```
-ANALIZZA <TICKER> [DATA]
-```
+
+*Opzione 1: Configurazione Guidata*
+- Digita: `CONFIGURA` per il setup completo con selezione interattiva dei parametri
+
+*Opzione 2: Comando Rapido*
+- Digita: `ANALIZZA <TICKER> [DATA]` per analisi rapida con parametri di default
 
 **Esempi:**
-- `ANALIZZA NVDA` (ultimo giorno)
+- `CONFIGURA` (setup completo)
+- `ANALIZZA NVDA` (ultimo giorno con parametri di default)
 - `ANALIZZA AAPL 2024-05-10` (data specifica)
 - `LISTA` (vedi asset disponibili)
 - `AIUTO` (mostra tutte le opzioni)
@@ -71,18 +107,50 @@ ANALIZZA <TICKER> [DATA]
 ✅ Dati in Excel per analisi ulteriore
 
 Inizia digitando un comando! 🎯
-        """.strip()
-    ).send()
+    """
+    
+    await cl.Message(content=welcome_msg.strip()).send()
 
 
 @cl.on_message
 async def main(message: cl.Message):
     """Gestisci i messaggi dell'utente"""
-    global ta
+    global ta, user_config
     
     user_input = message.content.strip().upper()
     
     try:
+        # Comando CONFIGURA - Setup guidato
+        if user_input == "CONFIGURA" or user_input == "SETUP":
+            user_config = await collect_parameters()
+            
+            # Aggiorna la config di TradingAgents con i parametri dell'utente
+            ta_config = DEFAULT_CONFIG.copy()
+            ta_config["max_debate_rounds"] = user_config["research_depth"]
+            ta_config["max_risk_discuss_rounds"] = user_config["research_depth"]
+            ta_config["quick_think_llm"] = user_config["shallow_thinker"]
+            ta_config["deep_think_llm"] = user_config["deep_thinker"]
+            ta_config["llm_provider"] = user_config["llm_provider"]
+            ta_config["backend_url"] = user_config["backend_url"]
+            
+            # Reinizializza TradingAgents con i nuovi parametri
+            ta = TradingAgentsGraph(
+                [analyst.value for analyst in user_config["analysts"]],
+                config=ta_config,
+                debug=True
+            )
+            
+            await cl.Message(
+                content="""
+✅ **Configuration saved!**
+
+Ora puoi eseguire analisi usando:
+- `ANALIZZA <TICKER>` - usa i parametri configurati
+- `ANALIZZA <TICKER> <DATA>` - specifica anche la data
+                """
+            ).send()
+            return
+        
         # Comando AIUTO
         if user_input == "AIUTO" or user_input == "HELP":
             await show_help()
@@ -103,6 +171,7 @@ async def main(message: cl.Message):
             content="""❌ Comando non riconosciuto.
 
 Comandi disponibili:
+- `CONFIGURA` - Configurazione guidata dei parametri
 - `ANALIZZA <TICKER>` - Analizza un titolo
 - `LISTA` - Mostra asset disponibili
 - `AIUTO` - Mostra questa guida
@@ -122,18 +191,37 @@ async def show_help():
 
 **COMANDI DISPONIBILI:**
 
-1️⃣ ANALIZZA <TICKER> [DATA]
+1️⃣ CONFIGURA (o SETUP)
+   Configurazione guidata con selezione interattiva:
+   ✓ Seleziona gli analisti
+   ✓ Scegli la profondità della ricerca
+   ✓ Configura il provider LLM
+   ✓ Seleziona i modelli di thinking
+   
+   Usa questo comando per personalizzare completamente l'analisi!
+
+2️⃣ ANALIZZA <TICKER> [DATA]
    Esegue analisi completa di un titolo
    - TICKER: simbolo del titolo (es. NVDA, AAPL)
    - DATA: opzionale, formato YYYY-MM-DD
    
    Esempio: `ANALIZZA NVDA 2024-05-10`
+   
+   💡 Se hai usato CONFIGURA, verranno usati i tuoi parametri
+   📌 Altrimenti vengono usati parametri di default
 
-2️⃣ LISTA
+3️⃣ LISTA
    Mostra i principali asset su cui puoi fare analisi
 
-3️⃣ AIUTO
+4️⃣ AIUTO
    Mostra questa guida
+
+**WORKFLOW CONSIGLIATO:**
+
+1. Digita `CONFIGURA` per il setup iniziale
+2. Rispondi alle domande sulla configurazione
+3. Usa `ANALIZZA TICKER` per eseguire l'analisi
+4. Scarica report e dashboard quando terminata
 
 **COSA RICEVI DA UN'ANALISI:**
 
@@ -146,7 +234,7 @@ async def show_help():
    - Bull Researcher (Analista Rialzista)
    - Bear Researcher (Analista Ribassista)
    - Neutral Analyst (Analista Neutro)
-   - Risk Manager (Gestore del Rischio)
+   - Risk Managers (Gestioni Risk diversi)
 
 📈 Dashboard Interattivo
    - Gauge della decisione
@@ -155,8 +243,8 @@ async def show_help():
    - Metriche di performance
 
 📄 Report Scaricabili
-   - PDF: Report formale
-   - Excel: Dati strutturati
+   - PDF: Report formale completo
+   - Excel: Dati strutturati per analisi ulteriore
 
 **COME LEGGERE I RISULTATI:**
 
@@ -170,10 +258,12 @@ async def show_help():
    Consulta sempre un esperto prima di fare trading.
 
 🔑 API Keys richieste:
-   - OpenAI per LLM
+   - OpenAI per LLM (o altro provider configurato)
    - Alpha Vantage (opzionale, altrimenti usa yfinance)
 
 💡 Migliori risultati con dati storici di 6+ mesi
+
+🎯 Suggerimento: Inizia con CONFIGURA per ottenere il massimo!
     """
     
     await cl.Message(content=help_text).send()
@@ -224,6 +314,7 @@ Prova con: `ANALIZZA [TICKER]`
 
 async def analyze_stock(user_input: str):
     """Esegui analisi completa di un titolo"""
+    global ta, user_config
     
     # Estrai ticker e data
     parts = user_input.split()
@@ -236,6 +327,16 @@ async def analyze_stock(user_input: str):
     
     ticker = parts[1].upper()
     date = parts[2] if len(parts) > 2 else datetime.now().strftime("%Y-%m-%d")
+    
+    # Se non è stata fatto il setup, mostralo
+    if user_config is None:
+        await cl.Message(
+            content="""⚠️ **No custom configuration found**
+
+Stai utilizzando i parametri di default. Per personalizzare l'analisi, digita:
+- `CONFIGURA` - per il setup guidato completo
+            """
+        ).send()
     
     # Messaggio di processing
     await cl.Message(
