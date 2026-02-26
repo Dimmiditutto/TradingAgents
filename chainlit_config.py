@@ -156,7 +156,7 @@ Inserisci la data per l'analisi (formato: YYYY-MM-DD)
 async def ask_analysts() -> List[str]:
     """Chiedi gli analisti da selezionare"""
     actions = [
-        cl.Action(name=f"analyst_{value}", value=value, label=label)
+        cl.Action(name=f"analyst_{value}", payload=value, label=label)
         for label, value in ANALYST_OPTIONS
     ]
     
@@ -174,15 +174,15 @@ Seleziona i team di analisti che vuoi utilizzare:
         response = await cl.AskActionMessage(
             content=f"**{label}** - Include in analysis?",
             actions=[
-                cl.Action(name="yes", value="yes", label="✅ Yes"),
-                cl.Action(name="no", value="no", label="❌ No"),
+                cl.Action(name="yes", payload="yes", label="✅ Yes"),
+                cl.Action(name="no", payload="no", label="❌ No"),
             ],
             timeout=60
         ).send()
         
         if response:
             # Handle both dict and object response types
-            resp_value = response.get("value") if isinstance(response, dict) else getattr(response, "value", None)
+            resp_value = response.get("payload") if isinstance(response, dict) else getattr(response, "payload", None)
             if resp_value == "yes":
                 selected.append(value)
     
@@ -208,9 +208,9 @@ async def ask_research_depth() -> int:
 Quale livello di profondità vuoi per la ricerca?
         """,
         actions=[
-            cl.Action(name="shallow", value=1, label="🚀 Shallow (1 round)"),
-            cl.Action(name="medium", value=3, label="⚙️ Medium (3 rounds)"),
-            cl.Action(name="deep", value=5, label="🔬 Deep (5 rounds)"),
+            cl.Action(name="shallow", payload=1, label="🚀 Shallow (1 round)"),
+            cl.Action(name="medium", payload=3, label="⚙️ Medium (3 rounds)"),
+            cl.Action(name="deep", payload=5, label="🔬 Deep (5 rounds)"),
         ],
         timeout=300
     ).send()
@@ -218,7 +218,7 @@ Quale livello di profondità vuoi per la ricerca?
     if not response:
         return 3
     # Handle both dict and object response types
-    value = response.get("value") if isinstance(response, dict) else getattr(response, "value", None)
+    value = response.get("payload") if isinstance(response, dict) else getattr(response, "payload", None)
     return int(value) if value else 3
 
 
@@ -231,7 +231,7 @@ async def ask_llm_provider() -> Tuple[str, str]:
 Quale provider LLM vuoi utilizzare?
         """,
         actions=[
-            cl.Action(name=f"provider_{value}", value=value, label=label)
+            cl.Action(name=f"provider_{value}", payload=value, label=label)
             for label, value in LLM_PROVIDER_OPTIONS
         ],
         timeout=300
@@ -241,7 +241,7 @@ Quale provider LLM vuoi utilizzare?
         provider = "openai"
     else:
         # Handle both dict and object response types
-        provider = response.get("value") if isinstance(response, dict) else getattr(response, "value", "openai")
+        provider = response.get("payload") if isinstance(response, dict) else getattr(response, "payload", "openai")
     backend_url = BASE_URLS.get(provider, "https://api.openai.com/v1")
     
     await cl.Message(
@@ -256,7 +256,7 @@ async def ask_shallow_thinking_agent(provider: str) -> str:
     options = SHALLOW_AGENT_OPTIONS.get(provider.lower(), SHALLOW_AGENT_OPTIONS["openai"])
     
     actions = [
-        cl.Action(name=f"shallow_{value}", value=value, label=label)
+        cl.Action(name=f"shallow_{value}", payload=value, label=label)
         for label, value in options
     ]
     
@@ -274,7 +274,7 @@ Seleziona il modello per il quick thinking (analisi veloce):
         model = options[0][1]
     else:
         # Handle both dict and object response types
-        model = response.get("value") if isinstance(response, dict) else getattr(response, "value", options[0][1])
+        model = response.get("payload") if isinstance(response, dict) else getattr(response, "payload", options[0][1])
     
     await cl.Message(
         content=f"✅ Quick-Thinking Model: **{model}**"
@@ -288,7 +288,7 @@ async def ask_deep_thinking_agent(provider: str) -> str:
     options = DEEP_AGENT_OPTIONS.get(provider.lower(), DEEP_AGENT_OPTIONS["openai"])
     
     actions = [
-        cl.Action(name=f"deep_{value}", value=value, label=label)
+        cl.Action(name=f"deep_{value}", payload=value, label=label)
         for label, value in options
     ]
     
@@ -306,7 +306,7 @@ Seleziona il modello per il deep thinking (analisi approfondita):
         model = options[0][1]
     else:
         # Handle both dict and object response types
-        model = response.get("value") if isinstance(response, dict) else getattr(response, "value", options[0][1])
+        model = response.get("payload") if isinstance(response, dict) else getattr(response, "payload", options[0][1])
     
     await cl.Message(
         content=f"✅ Deep-Thinking Model: **{model}**"
