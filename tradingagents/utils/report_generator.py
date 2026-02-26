@@ -14,7 +14,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 
 class ReportGenerator:
@@ -271,7 +271,7 @@ class ReportGenerator:
         date: str,
         decision: Dict[str, Any],
         analysis_data: Optional[Dict[str, Any]] = None
-    ) -> tuple:
+    ) -> Tuple[str, str]:
         """
         Genera sia report PDF che Excel
         
