@@ -114,7 +114,7 @@ Quale titolo vuoi analizzare?
         timeout=300
     ).send()
     
-    return response["content"].strip().upper() if response else "SPY"
+    return response.content.strip().upper() if response else "SPY"
 
 
 async def ask_analysis_date() -> str:
@@ -132,10 +132,10 @@ Inserisci la data per l'analisi (formato: YYYY-MM-DD)
         timeout=300
     ).send()
     
-    if not response or not response["content"].strip():
+    if not response or not response.content.strip():
         return default_date
     
-    return response["content"].strip()
+    return response.content.strip()
 
 
 async def ask_analysts() -> List[str]:
@@ -197,7 +197,7 @@ Quale livello di profondità vuoi per la ricerca?
         timeout=300
     ).send()
     
-    return int(response["value"]) if response else 3
+    return int(response.value) if response else 3
 
 
 async def ask_llm_provider() -> Tuple[str, str]:
@@ -215,7 +215,7 @@ Quale provider LLM vuoi utilizzare?
         timeout=300
     ).send()
     
-    provider = response["value"] if response else "openai"
+    provider = response.value if response else "openai"
     backend_url = BASE_URLS.get(provider, "https://api.openai.com/v1")
     
     await cl.Message(
@@ -244,7 +244,7 @@ Seleziona il modello per il quick thinking (analisi veloce):
         timeout=300
     ).send()
     
-    model = response["value"] if response else options[0][1]
+    model = response.value if response else options[0][1]
     
     await cl.Message(
         content=f"✅ Quick-Thinking Model: **{model}**"
@@ -272,7 +272,7 @@ Seleziona il modello per il deep thinking (analisi approfondita):
         timeout=300
     ).send()
     
-    model = response["value"] if response else options[0][1]
+    model = response.value if response else options[0][1]
     
     await cl.Message(
         content=f"✅ Deep-Thinking Model: **{model}**"
