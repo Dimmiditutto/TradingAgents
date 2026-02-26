@@ -165,7 +165,7 @@ Seleziona i team di analisti che vuoi utilizzare:
             timeout=60
         ).send()
         
-        if response and response.get("value") == "yes":
+        if response and response.value == "yes":
             selected.append(value)
     
     if not selected:
