@@ -43,31 +43,135 @@ if not any([api_key_openai, api_key_anthropic, api_key_google]):
     # Non voglio crashare la app, lascia che l'utente la avvii comunque
     # e poi veda il messaggio di errore quando fa il primo comando
 
-# Import TradingAgents
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.default_config import DEFAULT_CONFIG
-from tradingagents.utils.report_generator import ReportGenerator
-from tradingagents.utils.dashboard import DashboardGenerator
+# Import TradingAgents - LAZY LOAD
+# DO NOT import heavy modules here!
+# We'll import them only when needed (on first command)
 
-# Import della configurazione Chainlit
-from chainlit_config import collect_parameters
+# Placeholder for lazy-loaded config
+DEFAULT_CONFIG = {}
 
-# Configurazione
-config = DEFAULT_CONFIG.copy()
-config["data_vendors"] = {
-    "core_stock_apis": "yfinance",
-    "technical_indicators": "yfinance",
-    "fundamental_data": "yfinance",
-    "news_data": "yfinance",
-}
+# Placeholder for lazy-loaded classes
+TradingAgentsGraph = None
+ReportGenerator = None
+DashboardGenerator = None
 
-# Inizializza generatori
-report_gen = ReportGenerator(output_dir="./reports")
-dashboard_gen = DashboardGenerator(output_dir="./dashboards")
+# Import della configurazione Chainlit - LAZY LOAD (don't import here!)
+# from chainlit_config import collect_parameters
 
-# Istanza globale TradingAgents
+# Configurazione - usa lazy loading
+config = DEFAULT_CONFIG.copy() if DEFAULT_CONFIG else {}
+if not config:
+    config = {
+        "data_vendors": {
+            "core_stock_apis": "yfinance",
+            "technical_indicators": "yfinance",
+            "fundamental_data": "yfinance",
+            "news_data": "yfinance",
+        }
+    }
+else:
+    config["data_vendors"] = {
+        "core_stock_apis": "yfinance",
+        "technical_indicators": "yfinance",
+        "fundamental_data": "yfinance",
+        "news_data": "yfinance",
+    }
+
+# Inizializza generatori - lazily
+report_gen = None
+dashboard_gen = None
+
+def get_report_gen():
+    """Lazy load ReportGenerator only when needed"""
+    global report_gen
+    if report_gen is None:
+        try:
+            from tradingagents.utils.report_generator import ReportGenerator as RG
+            report_gen = RG(output_dir="./reports")
+        except Exception as e:
+            import traceback
+            print(f"⚠️ Error loading ReportGenerator: {e}\n{traceback.format_exc()}")
+            return None
+    return report_gen
+
+def get_dashboard_gen():
+    """Lazy load DashboardGenerator only when needed"""
+    global dashboard_gen
+    if dashboard_gen is None:
+        try:
+            from tradingagents.utils.dashboard import DashboardGenerator as DG
+            dashboard_gen = DG(output_dir="./dashboards")
+        except Exception as e:
+            import traceback
+            print(f"⚠️ Error loading DashboardGenerator: {e}\n{traceback.format_exc()}")
+            return None
+    return dashboard_gen
+
+# Istanza globale TradingAgents - lazy loading
 ta = None
 user_config = None  # Configurazione dell'utente
+last_error = None  # Track last error for debugging
+
+def get_ta():
+    """Lazy load TradingAgentsGraph only when needed"""
+    global ta, config, last_error
+    if ta is None:
+        try:
+            # Ensure local package paths are available (avoid shadowed installs)
+            local_root = Path(__file__).parent.parent
+            alt_root = local_root / "TradingAgents"
+            for path in (local_root, alt_root):
+                if path.exists() and str(path) not in sys.path:
+                    sys.path.insert(0, str(path))
+
+            # Verify API keys are available
+            openai_key = os.getenv("OPENAI_API_KEY")
+            anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+            google_key = os.getenv("GOOGLE_API_KEY")
+            
+            if not any([openai_key, anthropic_key, google_key]):
+                last_error = "No API keys found in environment"
+                print("❌ No API keys available. Check .env file.")
+                return None
+            
+            # Lazy load config if needed - check for essential keys
+            if "project_dir" not in config:
+                from tradingagents.default_config import DEFAULT_CONFIG as DC
+                # Start fresh with DEFAULT_CONFIG and preserve data_vendors
+                vendors = config.get("data_vendors", {})
+                config.clear()
+                config.update(DC)
+                if vendors:
+                    config["data_vendors"] = vendors
+            
+            # Ensure API keys info in config
+            config["api_keys_available"] = {
+                "openai": openai_key is not None,
+                "anthropic": anthropic_key is not None,
+                "google": google_key is not None,
+            }
+            
+            print(f"🔑 Using {config.get('llm_provider', 'openai')} provider")
+            
+            # Now load TradingAgentsGraph
+            from tradingagents.graph.trading_graph import TradingAgentsGraph as TAG
+            ta = TAG(debug=False, config=config)
+            last_error = None  # Clear error on success
+            print("✅ TradingAgentsGraph loaded successfully")
+        except Exception as e:
+            import traceback
+            last_error = str(e)
+            error_msg = f"⚠️ Error loading TradingAgentsGraph: {e}\n{traceback.format_exc()}"
+            print(error_msg)
+            return None
+    return ta
+
+
+async def get_collect_parameters():
+    """Lazy load chainlit_config module and get collect_parameters function"""
+    from chainlit_config import collect_parameters
+    return await collect_parameters()
+
 
 
 @cl.on_chat_start
@@ -75,8 +179,8 @@ async def start():
     """Inizializzazione dell'app"""
     global ta, user_config
     
-    # Inizializza TradingAgents con config di default
-    ta = TradingAgentsGraph(debug=False, config=config)
+    # Lazy initialize on first use
+    # ta = get_ta()  # Don't load yet
     
     # Messaggio di benvenuto
     welcome_msg = """
@@ -122,10 +226,10 @@ async def main(message: cl.Message):
     try:
         # Comando CONFIGURA - Setup guidato
         if user_input == "CONFIGURA" or user_input == "SETUP":
-            user_config = await collect_parameters()
+            user_config = await get_collect_parameters()
             
-            # Aggiorna la config di TradingAgents con i parametri dell'utente
-            ta_config = DEFAULT_CONFIG.copy()
+            # Aggiorna la config globale con i parametri dell'utente
+            ta_config = DEFAULT_CONFIG.copy() if DEFAULT_CONFIG else {}
             ta_config["max_debate_rounds"] = user_config["research_depth"]
             ta_config["max_risk_discuss_rounds"] = user_config["research_depth"]
             ta_config["quick_think_llm"] = user_config["shallow_thinker"]
@@ -133,12 +237,11 @@ async def main(message: cl.Message):
             ta_config["llm_provider"] = user_config["llm_provider"]
             ta_config["backend_url"] = user_config["backend_url"]
             
-            # Reinizializza TradingAgents con i nuovi parametri
-            ta = TradingAgentsGraph(
-                [analyst.value for analyst in user_config["analysts"]],
-                config=ta_config,
-                debug=True
-            )
+            # Update global config for next ta initialization
+            config.update(ta_config)
+            
+            # Force reset of ta so it gets recreated with new config on next use
+            ta = None
             
             await cl.Message(
                 content="""
@@ -349,7 +452,34 @@ Stai utilizzando i parametri di default. Per personalizzare l'analisi, digita:
             content=f"🔄 Esecuzione agenti trading..."
         ).send()
         
-        _, decision = ta.propagate(ticker, date)
+        await cl.Message(
+            content=f"⏳ Caricamento TradingAgentsGraph (prima volta: 10-20 secondi)..."
+        ).send()
+        
+        trading_graph = get_ta()
+        if trading_graph is None:
+            # Show specific error if available
+            error_detail = f"\n\n**Errore specifico:** `{last_error}`" if last_error else ""
+            
+            error_msg = f"""❌ Errore durante il caricamento di TradingAgentsGraph.{error_detail}
+
+**Possibili cause:**
+1. Import fallito - controlla che tutti i moduli siano presenti
+2. Problema di configurazione - verifica le API keys nel .env
+3. Dipendenze mancanti - controlla requirements.txt
+
+**Debug:**
+Esegui questo comando nel terminale per vedere l'errore dettagliato:
+```bash
+cd /workspaces/TradingAgents/web
+python debug_import.py
+```
+
+Controlla anche i log del server per il traceback completo."""
+            await cl.Message(content=error_msg).send()
+            return
+        
+        _, decision = trading_graph.propagate(ticker, date)
         
         # Estrai informazioni dalla decisione
         decision_score = extract_decision_score(decision)
@@ -361,15 +491,22 @@ Stai utilizzando i parametri di default. Per personalizzare l'analisi, digita:
         ).send()
         
         # Genera dashboard
-        decision_fig = dashboard_gen.create_decision_gauge(decision_score, sentiment)
+        dash_gen = get_dashboard_gen()
+        if dash_gen is None:
+            await cl.Message(
+                content="⚠️ Dashboard generator non disponibile"
+            ).send()
+            return
+            
+        decision_fig = dash_gen.create_decision_gauge(decision_score, sentiment)
         sentiment_breakdown = {
             "Rialzista": decision_score,
             "Neutro": 1 - abs(decision_score),
             "Ribassista": -decision_score if decision_score < 0 else 0
         }
-        sentiment_fig = dashboard_gen.create_sentiment_breakdown(sentiment_breakdown)
+        sentiment_fig = dash_gen.create_sentiment_breakdown(sentiment_breakdown)
         
-        dashboard_path = dashboard_gen.create_dashboard_html(
+        dashboard_path = dash_gen.create_dashboard_html(
             ticker=ticker,
             decision_fig=decision_fig,
             sentiment_fig=sentiment_fig,
@@ -377,6 +514,13 @@ Stai utilizzando i parametri di default. Per personalizzare l'analisi, digita:
         )
         
         # Genera report
+        rep_gen = get_report_gen()
+        if rep_gen is None:
+            await cl.Message(
+                content="⚠️ Report generator non disponibile"
+            ).send()
+            return
+            
         analysis_data = {
             "Ticker": ticker,
             "Data Analisi": date,
@@ -384,7 +528,7 @@ Stai utilizzando i parametri di default. Per personalizzare l'analisi, digita:
             "Sentiment": sentiment
         }
         
-        pdf_path, excel_path = report_gen.generate_both_reports(
+        pdf_path, excel_path = rep_gen.generate_both_reports(
             ticker=ticker,
             date=date,
             decision=decision,
