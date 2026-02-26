@@ -6,7 +6,14 @@ Gestisce la raccolta interattiva dei parametri per l'analisi trading
 import chainlit as cl
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
-from cli.models import AnalystType
+from enum import Enum
+
+# Define AnalystType locally to avoid dependency on cli module
+class AnalystType(str, Enum):
+    MARKET = "market"
+    SOCIAL = "social"
+    NEWS = "news"
+    FUNDAMENTALS = "fundamentals"
 
 # Opzioni disponibili
 ANALYST_OPTIONS = [
@@ -114,7 +121,11 @@ Quale titolo vuoi analizzare?
         timeout=300
     ).send()
     
-    return response.content.strip().upper() if response else "SPY"
+    if not response:
+        return "SPY"
+    # Handle both dict and object response types
+    content = response.get("content") if isinstance(response, dict) else getattr(response, "content", None)
+    return content.strip().upper() if content else "SPY"
 
 
 async def ask_analysis_date() -> str:
@@ -132,10 +143,14 @@ Inserisci la data per l'analisi (formato: YYYY-MM-DD)
         timeout=300
     ).send()
     
-    if not response or not response.content.strip():
+    if not response:
+        return default_date
+    # Handle both dict and object response types
+    content = response.get("content") if isinstance(response, dict) else getattr(response, "content", None)
+    if not content or not content.strip():
         return default_date
     
-    return response.content.strip()
+    return content.strip()
 
 
 async def ask_analysts() -> List[str]:
@@ -165,8 +180,11 @@ Seleziona i team di analisti che vuoi utilizzare:
             timeout=60
         ).send()
         
-        if response and response.value == "yes":
-            selected.append(value)
+        if response:
+            # Handle both dict and object response types
+            resp_value = response.get("value") if isinstance(response, dict) else getattr(response, "value", None)
+            if resp_value == "yes":
+                selected.append(value)
     
     if not selected:
         selected = ["market"]  # Default
@@ -197,7 +215,11 @@ Quale livello di profondità vuoi per la ricerca?
         timeout=300
     ).send()
     
-    return int(response.value) if response else 3
+    if not response:
+        return 3
+    # Handle both dict and object response types
+    value = response.get("value") if isinstance(response, dict) else getattr(response, "value", None)
+    return int(value) if value else 3
 
 
 async def ask_llm_provider() -> Tuple[str, str]:
@@ -215,7 +237,11 @@ Quale provider LLM vuoi utilizzare?
         timeout=300
     ).send()
     
-    provider = response.value if response else "openai"
+    if not response:
+        provider = "openai"
+    else:
+        # Handle both dict and object response types
+        provider = response.get("value") if isinstance(response, dict) else getattr(response, "value", "openai")
     backend_url = BASE_URLS.get(provider, "https://api.openai.com/v1")
     
     await cl.Message(
@@ -244,7 +270,11 @@ Seleziona il modello per il quick thinking (analisi veloce):
         timeout=300
     ).send()
     
-    model = response.value if response else options[0][1]
+    if not response:
+        model = options[0][1]
+    else:
+        # Handle both dict and object response types
+        model = response.get("value") if isinstance(response, dict) else getattr(response, "value", options[0][1])
     
     await cl.Message(
         content=f"✅ Quick-Thinking Model: **{model}**"
@@ -272,7 +302,11 @@ Seleziona il modello per il deep thinking (analisi approfondita):
         timeout=300
     ).send()
     
-    model = response.value if response else options[0][1]
+    if not response:
+        model = options[0][1]
+    else:
+        # Handle both dict and object response types
+        model = response.get("value") if isinstance(response, dict) else getattr(response, "value", options[0][1])
     
     await cl.Message(
         content=f"✅ Deep-Thinking Model: **{model}**"
