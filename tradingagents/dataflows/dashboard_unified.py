@@ -131,7 +131,7 @@ def _build_scan_tab(scan_results: List[Dict]) -> str:
         ticker = result.get("ticker", "N/A")
         price = result.get("entry_price", 0)
         atr = result.get("atr", 0)
-        structure = result.get("context", {}).get("structure_event", "N/A")
+        structure = result.get("structure_event") or result.get("context", {}).get("structure_event", "N/A")
         
         score_color = _score_color(score)
         direction_badge = f'<span class="badge badge-{direction.lower()}">{direction}</span>'
@@ -198,12 +198,13 @@ def _build_backtest_tab(backtest_results: Dict) -> str:
         </div>'''
     
     # Main metrics
-    total_trades = backtest_results.get("total_trades", 0)
-    win_rate = backtest_results.get("win_rate", 0)
-    profit_factor = backtest_results.get("profit_factor", 0)
-    total_pnl = backtest_results.get("total_pnl_pct", 0)
-    sharpe = backtest_results.get("sharpe_ratio", 0)
-    max_dd = backtest_results.get("max_drawdown", 0)
+    metrics_source = backtest_results.get("metrics", backtest_results)
+    total_trades = metrics_source.get("total_trades", 0)
+    win_rate = metrics_source.get("win_rate", 0)
+    profit_factor = metrics_source.get("profit_factor", 0)
+    total_pnl = metrics_source.get("total_pnl_pct", 0)
+    sharpe = metrics_source.get("sharpe_ratio", 0)
+    max_dd = metrics_source.get("max_drawdown", 0)
     
     metrics = f"""<div class="metrics-grid">
         <div class="metric">
@@ -248,9 +249,11 @@ def _build_breakdown_table(backtest_results: Dict) -> str:
     
     html = ""
     
+    breakdown_source = backtest_results.get("breakdown", backtest_results)
+
     # By event type
-    if "breakdown_by_event" in backtest_results:
-        breakdown = backtest_results["breakdown_by_event"]
+    if "by_event" in breakdown_source or "breakdown_by_event" in breakdown_source:
+        breakdown = breakdown_source.get("by_event", breakdown_source.get("breakdown_by_event", {}))
         rows = []
         for event, stats in breakdown.items():
             row = f"""<tr>
@@ -277,8 +280,8 @@ def _build_breakdown_table(backtest_results: Dict) -> str:
         </table>"""
     
     # By direction
-    if "breakdown_by_direction" in backtest_results:
-        breakdown = backtest_results["breakdown_by_direction"]
+    if "by_direction" in breakdown_source or "breakdown_by_direction" in breakdown_source:
+        breakdown = breakdown_source.get("by_direction", breakdown_source.get("breakdown_by_direction", {}))
         rows = []
         for direction, stats in breakdown.items():
             row = f"""<tr>

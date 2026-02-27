@@ -80,7 +80,7 @@ def test_indicators_advanced(df):
         print(f"  → Total columns: {len(df_with_indicators.columns)}")
         
         # Check key indicators
-        key_indicators = ["RSI", "MACD", "ADX", "SuperTrend", "ATR", "volume_ratio"]
+        key_indicators = ["rsi", "macd", "adx", "supertrend", "atr", "volume_ratio"]
         for ind in key_indicators:
             if ind in df_with_indicators.columns:
                 val = df_with_indicators[ind].iloc[-1]
@@ -120,7 +120,7 @@ def test_scoring_engine(df):
         
         # Test 3a: Score LONG
         print("\n✓ Scoring LONG direction...")
-        signal_long = score_signal(df, ticker="TEST_UP", direction="LONG")
+        signal_long = score_signal("TEST_UP", df, direction="LONG")
         if signal_long:
             print(f"  → Score: {signal_long.score:.0f}/100")
             print(f"  → Filters Passed: {signal_long.filters_passed}")
@@ -136,7 +136,7 @@ def test_scoring_engine(df):
         
         # Test 3b: Score SHORT
         print("\n✓ Scoring SHORT direction...")
-        signal_short = score_signal(df, ticker="TEST_UP", direction="SHORT")
+        signal_short = score_signal("TEST_UP", df, direction="SHORT")
         if signal_short:
             print(f"  → Score: {signal_short.score:.0f}/100")
             print(f"  → Filters Passed: {signal_short.filters_passed}")
@@ -145,7 +145,7 @@ def test_scoring_engine(df):
         
         # Test 3c: Both directions
         print("\n✓ Scoring both directions...")
-        signals = score_both_directions(df, ticker="TEST_UP")
+        signals = score_both_directions("TEST_UP", df)
         print(f"  → Generated {len(signals)} signals")
         valid_signals = [s for s in signals if s]
         print(f"  → Valid signals: {len(valid_signals)}")

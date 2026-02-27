@@ -31,8 +31,17 @@ def _dir_b(d):
 
 def _evt_b(e):
     if not e: return _badge("—","bn")
-    cls = {"CHoCH_UP":"bc-u","CHoCH_DOWN":"bc-d","BOS_UP":"bb-u","BOS_DOWN":"bb-d"}.get(e,"bn")
-    return _badge(e.replace("_"," "), cls)
+    cls = {
+        "CHoCH_UP": "bc-u",
+        "CHoCH_DOWN": "bc-d",
+        "BOS_UP": "bb-u",
+        "BOS_DOWN": "bb-d",
+        "TF": "bs-tf",
+        "CP": "bs-cp",
+        "MOM": "bs-mom",
+        "MR": "bs-mr",
+    }.get(e, "bn")
+    return _badge(e.replace("_", " "), cls)
 
 def _mb(v, c="#4fc3f7"):
     w = max(0, min(100, float(v or 0)))
@@ -123,8 +132,10 @@ def _sig_row(s, rank):
     rr  = float(s.get("risk_reward",0) or 0)
     di  = s.get("direction","")
     tk  = s.get("ticker","")
-    wt  = s.get("weekly_trend","")
-    dt  = s.get("daily_trend","")
+    wt  = str(s.get("weekly_trend","") or "")
+    dt  = str(s.get("daily_trend","") or "")
+    wt_short = wt[:3] if wt else "—"
+    dt_short = dt[:3] if dt else "—"
     wc  = "var(--g)" if wt=="UPTREND" else ("var(--r)" if wt=="DOWNTREND" else "var(--mu)")
     dc  = "var(--g)" if dt=="UPTREND" else ("var(--r)" if dt=="DOWNTREND" else "var(--mu)")
     return f"""<tr class="sr" data-dir="{di}" data-sc="{sc:.0f}">
@@ -141,7 +152,7 @@ def _sig_row(s, rank):
   <td class="nu">{_f(s.get("rsi"),1)}</td>
   <td class="nu">{_f(s.get("volume_ratio"),1)}x</td>
   <td class="nu">{_f(s.get("atr_pct"),2)}%</td>
-  <td style="text-align:center;font-size:11px"><span style="color:{wc}">{wt[:3]}</span><br><span style="color:{dc}">{dt[:3]}</span></td>
+  <td style="text-align:center;font-size:11px"><span style="color:{wc}">{wt_short}</span><br><span style="color:{dc}">{dt_short}</span></td>
   <td><button class="btn-tr" onclick="addPos('{tk}','{di}',{ep:.4f},{sl_:.4f},{t1:.4f},{sc:.1f})">+Track</button></td>
 </tr>"""
 
@@ -308,6 +319,10 @@ td{padding:8px 6px;border-bottom:1px solid rgba(28,37,53,.7);vertical-align:midd
 .bb-u{background:rgba(64,196,255,.1);color:var(--b)}
 .bb-d{background:rgba(206,147,216,.1);color:var(--p)}
 .bn{background:rgba(255,255,255,.05);color:var(--mu)}
+.bs-tf{background:rgba(0,230,118,.12);color:#a5d6a7}
+.bs-cp{background:rgba(64,196,255,.12);color:#81d4fa}
+.bs-mom{background:rgba(255,235,59,.12);color:#fff59d}
+.bs-mr{background:rgba(255,138,128,.12);color:#ffccbc}
 .mb{display:flex;align-items:center;gap:4px;margin-bottom:2px;height:13px}
 .mbf{height:5px;border-radius:2px;min-width:2px}
 .mbl{font-size:9px;color:var(--mu);min-width:20px}
@@ -362,7 +377,7 @@ let _dir=null,_evt=null,_minSc=0;
 function applyF(){
   document.querySelectorAll('tr.sr').forEach(r=>{
     const d=r.dataset.dir, sc=parseFloat(r.dataset.sc||0);
-    const et=r.querySelector('.bc-u,.bc-d,.bb-u,.bb-d');
+    const et=r.querySelector('.bc-u,.bc-d,.bb-u,.bb-d,.bs-tf,.bs-cp,.bs-mom,.bs-mr');
     const ev=et?et.textContent:'';
     let ok=true;
     if(_dir&&d!==_dir)ok=false;

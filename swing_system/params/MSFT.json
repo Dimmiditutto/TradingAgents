@@ -1,0 +1,66 @@
+{
+  "indicators": {
+    "ema_period": 10,
+    "sma_fast": 50,
+    "sma_slow": 200,
+    "vwma_period": 20,
+    "rsi_period": 14,
+    "tsi_long": 13,
+    "tsi_short": 7,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_sig": 9,
+    "bb_period": 20,
+    "bb_std": 2.0,
+    "atr_period": 14,
+    "adx_period": 14,
+    "er_period": 10,
+    "st_period": 10,
+    "st_multiplier": 3.0
+  },
+  "signals": {
+    "mer": 0.22,
+    "madx": 10,
+    "mbw": 20,
+    "merc": 0.16,
+    "rsi_mr": 40,
+    "pb_mr": 0.35,
+    "sl": 1.2,
+    "t1": 2.0,
+    "t2": 4.0,
+    "trail": 1.5,
+    "max_hold": 12,
+    "sl_mr": 1.0,
+    "t1_mr": 1.6,
+    "t2_mr": 3.2
+  },
+  "risk_profiles": {
+    "conservativo": {
+      "TF": 1.0,
+      "CP": 0.5,
+      "MOM": 1.0,
+      "MR": 0.0
+    },
+    "bilanciato": {
+      "TF": 1.8,
+      "CP": 0.9,
+      "MOM": 1.8,
+      "MR": 0.0
+    },
+    "aggressivo": {
+      "TF": 2.5,
+      "CP": 1.25,
+      "MOM": 2.5,
+      "MR": 0.0
+    }
+  },
+  "signal_scores": {
+    "TF": 80,
+    "CP": 70,
+    "MOM": 75,
+    "MR": 60
+  },
+  "warmup": 252,
+  "risk_profile_default": "bilanciato",
+  "_source": "msft_params.json - Walk-forward optimized 2013-2026, 213 trades total, CAGR 13.5% (bilanciato), PF 2.08, Sharpe 1.018"
+}

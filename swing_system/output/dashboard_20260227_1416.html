@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MTF Swing Screener</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=IBM+Plex+Mono:wght@300;400;600&display=swap');
+:root{--bg:#07090e;--s1:#0d1117;--s2:#111922;--bd:#1c2535;
+  --tx:#c9d1d9;--mu:#4a5568;
+  --g:#00e676;--r:#ff5252;--y:#ffee58;--b:#40c4ff;--p:#ce93d8;
+  --font:'IBM Plex Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:13px}
+code{background:var(--s2);padding:2px 6px;border-radius:3px;font-family:var(--font)}
+.hdr{background:linear-gradient(135deg,#0d1117,#0f1820,#0d1117);
+  border-bottom:1px solid var(--bd);padding:20px 28px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.hdr-t{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:.04em}
+.hdr-t span{color:var(--g)}
+.hdr-s{font-size:10px;color:var(--mu);margin-top:3px}
+.stat-bar{display:flex;gap:10px;flex-wrap:wrap;padding:12px 28px;border-bottom:1px solid var(--bd)}
+.stat{background:var(--s2);border:1px solid var(--bd);border-radius:5px;
+  padding:8px 14px;text-align:center;min-width:80px}
+.stat-v{font-size:18px;font-weight:700;color:#fff}
+.stat-l{font-size:9px;color:var(--mu);margin-top:1px;text-transform:uppercase;letter-spacing:.12em}
+.tabs{display:flex;border-bottom:1px solid var(--bd);padding:0 28px}
+.tab{padding:10px 18px;cursor:pointer;font-family:var(--font);font-size:12px;
+  font-weight:600;letter-spacing:.08em;border-bottom:2px solid transparent;
+  color:var(--mu);transition:all .15s}
+.tab:hover{color:var(--tx)}
+.tab.act{color:#fff;border-bottom-color:var(--b)}
+.tc{display:none;padding:20px 28px 48px}
+.tc.act{display:block}
+.fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.fb{padding:4px 12px;border-radius:3px;cursor:pointer;font-family:var(--font);
+  font-size:11px;font-weight:600;letter-spacing:.08em;
+  border:1px solid var(--bd);background:var(--s2);color:var(--mu);transition:all .15s}
+.fb:hover{color:#fff;border-color:var(--b);background:rgba(64,196,255,.08)}
+.fb.act{border-color:var(--b);color:var(--b)}
+.fb.act-g{border-color:var(--g);background:rgba(0,230,118,.1);color:var(--g)}
+.fb.act-r{border-color:var(--r);background:rgba(255,82,82,.1);color:var(--r)}
+input[type=range]{accent-color:var(--b);vertical-align:middle;width:100px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:2px solid var(--bd)}
+th{padding:8px 6px;text-align:left;font-size:9px;letter-spacing:.15em;
+   text-transform:uppercase;color:var(--mu);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid rgba(28,37,53,.7);vertical-align:middle}
+.sr{transition:background .1s}
+.sr:hover td{background:rgba(255,255,255,.025)}
+.rk{color:var(--mu);font-size:10px;width:28px}
+.tk{font-weight:700;color:#fff;font-size:14px;min-width:55px}
+.sc{font-size:15px;min-width:48px}
+.nu{text-align:right;min-width:65px}
+.sb{min-width:110px}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;
+  font-size:10px;font-weight:600;letter-spacing:.05em;white-space:nowrap}
+.bl{background:rgba(0,230,118,.18);color:var(--g)}
+.br{background:rgba(255,82,82,.18);color:var(--r)}
+.bc-u{background:rgba(0,230,118,.12);color:#a5d6a7}
+.bc-d{background:rgba(255,82,82,.12);color:#ef9a9a}
+.bb-u{background:rgba(64,196,255,.1);color:var(--b)}
+.bb-d{background:rgba(206,147,216,.1);color:var(--p)}
+.bn{background:rgba(255,255,255,.05);color:var(--mu)}
+.bs-tf{background:rgba(0,230,118,.12);color:#a5d6a7}
+.bs-cp{background:rgba(64,196,255,.12);color:#81d4fa}
+.bs-mom{background:rgba(255,235,59,.12);color:#fff59d}
+.bs-mr{background:rgba(255,138,128,.12);color:#ffccbc}
+.mb{display:flex;align-items:center;gap:4px;margin-bottom:2px;height:13px}
+.mbf{height:5px;border-radius:2px;min-width:2px}
+.mbl{font-size:9px;color:var(--mu);min-width:20px}
+.btn-tr{padding:3px 9px;border-radius:3px;cursor:pointer;font-family:var(--font);
+  font-size:10px;font-weight:600;border:1px solid var(--bd);background:var(--s2);
+  color:var(--mu);transition:all .15s;white-space:nowrap}
+.btn-tr:hover{border-color:var(--b);color:var(--b)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.kpi-card{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:12px 14px;text-align:center}
+.kpi-v{font-size:20px;font-weight:700;line-height:1.2}
+.kpi-l{font-size:9px;color:var(--mu);margin-top:3px;text-transform:uppercase;letter-spacing:.12em}
+.kpi-s{font-size:9px;color:var(--mu);margin-top:2px}
+.card{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:16px}
+.bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.bds{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:14px}
+.bdt{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
+.btt{width:100%;border-collapse:collapse;font-size:12px}
+.btt th{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);padding:4px 6px}
+.btt td{padding:5px 6px;border-bottom:1px solid rgba(28,37,53,.5)}
+.btt tr:last-child td{border-bottom:none}
+.pos-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:10px 0;border-bottom:1px solid rgba(28,37,53,.6)}
+.pos-row:last-child{border-bottom:none}
+.pos-tk{font-weight:700;color:#fff;min-width:55px}
+.pos-empty{color:var(--mu);padding:20px 0;font-size:12px}
+.btn-act{padding:7px 18px;border-radius:4px;cursor:pointer;font-family:var(--font);
+  font-size:12px;font-weight:600;border:1px solid var(--b);
+  background:rgba(64,196,255,.08);color:var(--b);transition:all .15s;margin-top:12px}
+.btn-act:hover{background:rgba(64,196,255,.18)}
+.btn-del{padding:3px 8px;border-radius:3px;cursor:pointer;font-family:var(--font);
+  font-size:10px;border:1px solid var(--mu);background:transparent;
+  color:var(--mu);transition:all .15s;margin-left:auto}
+.btn-del:hover{border-color:var(--r);color:var(--r)}
+.form-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:flex-end;
+  background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:14px}
+label.fl{font-size:10px;color:var(--mu);display:flex;flex-direction:column;gap:3px}
+label.fl input,label.fl select{background:var(--bg);border:1px solid var(--bd);border-radius:3px;
+  color:var(--tx);font-family:var(--font);font-size:12px;padding:5px 8px;
+  outline:none;width:108px}
+label.fl input:focus{border-color:var(--b)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-t">MTF Swing <span>Screener</span></div>
+    <div class="hdr-s">Aggiornato: 2026-02-27 14:16:38&nbsp;|&nbsp;Azioni USA — S&amp;P 500 / Nasdaq</div>
+  </div>
+  <div style="font-size:10px;color:var(--mu)">Alpha Vantage API&nbsp;|&nbsp;Daily + Weekly MTF</div>
+</div>
+
+<div class="stat-bar">
+  <div class="stat"><div class="stat-v">29</div><div class="stat-l">Segnali</div></div>
+  <div class="stat"><div class="stat-v" style="color:var(--g)">29</div><div class="stat-l">Long</div></div>
+  <div class="stat"><div class="stat-v" style="color:var(--r)">0</div><div class="stat-l">Short</div></div>
+  <div class="stat"><div class="stat-v" style="color:var(--y)">75.9</div><div class="stat-l">Score medio</div></div>
+  <div class="stat"><div class="stat-v">1.67</div><div class="stat-l">R/R medio</div></div>
+  <div class="stat"><div class="stat-v" style="color:var(--g)">0</div><div class="stat-l">CHoCH</div></div>
+  <div class="stat"><div class="stat-v" style="color:var(--b)">0</div><div class="stat-l">BOS</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab act" onclick="showTab('scan',this)">📡 Scan</div>
+  <div class="tab" onclick="showTab('backtest',this)">📊 Backtest</div>
+  <div class="tab" onclick="showTab('positions',this)">🗂 Posizioni</div>
+</div>
+
+<!-- SCAN TAB -->
+<div id="tc-scan" class="tc act">
+  <div class="fbar">
+    <button class="fb act" id="fb-all" onclick="fAll()">Tutti</button>
+    <button class="fb" id="fb-long" onclick="fDir('LONG')">▲ Long</button>
+    <button class="fb" id="fb-short" onclick="fDir('SHORT')">▼ Short</button>
+    <button class="fb" id="fb-ch" onclick="fEvt('CHoCH')">CHoCH</button>
+    <button class="fb" id="fb-bo" onclick="fEvt('BOS')">BOS</button>
+    <input type="range" min="0" max="100" value="0" oninput="fSc(this.value)">
+    <span id="sc-lbl" style="font-size:11px;color:var(--mu)">Score ≥ 0</span>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Ticker</th><th>Dir</th><th>Score</th>
+        <th>Str / Trd / Mom</th><th>Evento</th>
+        <th class="nu">Entry</th><th class="nu">Stop</th><th class="nu">T1</th>
+        <th class="nu">R/R</th><th class="nu">ADX</th><th class="nu">RSI</th>
+        <th class="nu">Vol</th><th class="nu">ATR%</th><th>W/D</th><th></th>
+      </tr></thead>
+      <tbody><tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#1</td><td class="tk">MSFT</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">342.72</td>
+  <td class="nu" style="color:var(--r)">333.14</td>
+  <td class="nu" style="color:var(--g)">358.69</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">27.5</td>
+  <td class="nu">74.7</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.33%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('MSFT','LONG',342.7189,333.1369,358.6888,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#2</td><td class="tk">GOOGL</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">102.77</td>
+  <td class="nu" style="color:var(--r)">100.14</td>
+  <td class="nu" style="color:var(--g)">107.15</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">33.8</td>
+  <td class="nu">71.9</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.13%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('GOOGL','LONG',102.7696,100.1397,107.1526,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#3</td><td class="tk">ORCL</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">462.20</td>
+  <td class="nu" style="color:var(--r)">449.70</td>
+  <td class="nu" style="color:var(--g)">483.04</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">20.9</td>
+  <td class="nu">75.4</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.25%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('ORCL','LONG',462.2005,449.6962,483.0410,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#4</td><td class="tk">WFC</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">170.48</td>
+  <td class="nu" style="color:var(--r)">165.98</td>
+  <td class="nu" style="color:var(--g)">177.98</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">18.5</td>
+  <td class="nu">65.5</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.20%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('WFC','LONG',170.4790,165.9776,177.9814,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#5</td><td class="tk">SCHW</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">83.27</td>
+  <td class="nu" style="color:var(--r)">80.84</td>
+  <td class="nu" style="color:var(--g)">87.31</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">14.5</td>
+  <td class="nu">54.2</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.43%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('SCHW','LONG',83.2664,80.8400,87.3104,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#6</td><td class="tk">PNC</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">392.69</td>
+  <td class="nu" style="color:var(--r)">382.11</td>
+  <td class="nu" style="color:var(--g)">410.32</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">36.5</td>
+  <td class="nu">71.1</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.24%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('PNC','LONG',392.6899,382.1118,410.3200,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#7</td><td class="tk">ABBV</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">423.46</td>
+  <td class="nu" style="color:var(--r)">412.60</td>
+  <td class="nu" style="color:var(--g)">441.56</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">21.5</td>
+  <td class="nu">75.6</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.14%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('ABBV','LONG',423.4595,412.6018,441.5557,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#8</td><td class="tk">ABT</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">371.16</td>
+  <td class="nu" style="color:var(--r)">360.86</td>
+  <td class="nu" style="color:var(--g)">388.34</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">36.5</td>
+  <td class="nu">74.8</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.31%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('ABT','LONG',371.1646,360.8584,388.3417,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#9</td><td class="tk">CAT</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">175.43</td>
+  <td class="nu" style="color:var(--r)">169.98</td>
+  <td class="nu" style="color:var(--g)">184.51</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">13.5</td>
+  <td class="nu">53.6</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.59%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('CAT','LONG',175.4318,169.9841,184.5115,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#10</td><td class="tk">UPS</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">127.70</td>
+  <td class="nu" style="color:var(--r)">124.19</td>
+  <td class="nu" style="color:var(--g)">133.55</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">15.7</td>
+  <td class="nu">61.5</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.29%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('UPS','LONG',127.7000,124.1912,133.5480,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#11</td><td class="tk">MMM</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">143.25</td>
+  <td class="nu" style="color:var(--r)">139.54</td>
+  <td class="nu" style="color:var(--g)">149.44</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">14.9</td>
+  <td class="nu">60.5</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.16%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('MMM','LONG',143.2528,139.5397,149.4411,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#12</td><td class="tk">SBUX</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">442.85</td>
+  <td class="nu" style="color:var(--r)">430.37</td>
+  <td class="nu" style="color:var(--g)">463.65</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">39.1</td>
+  <td class="nu">78.1</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.35%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('SBUX','LONG',442.8490,430.3659,463.6542,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#13</td><td class="tk">ROST</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">204.69</td>
+  <td class="nu" style="color:var(--r)">199.42</td>
+  <td class="nu" style="color:var(--g)">213.47</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">30.4</td>
+  <td class="nu">49.0</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.14%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('ROST','LONG',204.6877,199.4191,213.4686,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#14</td><td class="tk">XOM</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">370.68</td>
+  <td class="nu" style="color:var(--r)">360.59</td>
+  <td class="nu" style="color:var(--g)">387.50</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">31.2</td>
+  <td class="nu">68.1</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.27%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('XOM','LONG',370.6787,360.5855,387.5007,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#15</td><td class="tk">COP</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">118.70</td>
+  <td class="nu" style="color:var(--r)">115.34</td>
+  <td class="nu" style="color:var(--g)">124.31</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">21.5</td>
+  <td class="nu">70.6</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.36%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('COP','LONG',118.7042,115.3420,124.3079,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#16</td><td class="tk">EOG</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">255.94</td>
+  <td class="nu" style="color:var(--r)">248.59</td>
+  <td class="nu" style="color:var(--g)">268.17</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">20.6</td>
+  <td class="nu">57.9</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.39%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('EOG','LONG',255.9351,248.5944,268.1697,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="80">
+  <td class="rk">#17</td><td class="tk">PSX</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#69f0ae">80.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-tf">TF</span></td>
+  <td class="nu">451.54</td>
+  <td class="nu" style="color:var(--r)">437.68</td>
+  <td class="nu" style="color:var(--g)">474.64</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">16.1</td>
+  <td class="nu">60.0</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.56%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('PSX','LONG',451.5367,437.6751,474.6394,80.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#18</td><td class="tk">AAPL</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">169.36</td>
+  <td class="nu" style="color:var(--r)">164.47</td>
+  <td class="nu" style="color:var(--g)">177.51</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">18.7</td>
+  <td class="nu">55.5</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.41%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('AAPL','LONG',169.3593,164.4693,177.5093,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#19</td><td class="tk">BAC</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">451.55</td>
+  <td class="nu" style="color:var(--r)">438.74</td>
+  <td class="nu" style="color:var(--g)">472.89</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">49.8</td>
+  <td class="nu">61.9</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.36%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('BAC','LONG',451.5455,438.7401,472.8877,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#20</td><td class="tk">MS</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">354.53</td>
+  <td class="nu" style="color:var(--r)">343.56</td>
+  <td class="nu" style="color:var(--g)">372.81</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">14.2</td>
+  <td class="nu">42.8</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.58%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('MS','LONG',354.5324,343.5632,372.8146,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#21</td><td class="tk">USB</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">356.81</td>
+  <td class="nu" style="color:var(--r)">347.05</td>
+  <td class="nu" style="color:var(--g)">373.08</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">14.3</td>
+  <td class="nu">47.7</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.28%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('USB','LONG',356.8138,347.0518,373.0838,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#22</td><td class="tk">UNH</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">281.07</td>
+  <td class="nu" style="color:var(--r)">273.83</td>
+  <td class="nu" style="color:var(--g)">293.15</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">17.6</td>
+  <td class="nu">54.9</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.15%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('UNH','LONG',281.0746,273.8269,293.1541,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#23</td><td class="tk">MRK</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">327.25</td>
+  <td class="nu" style="color:var(--r)">318.61</td>
+  <td class="nu" style="color:var(--g)">341.66</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">19.5</td>
+  <td class="nu">56.2</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.20%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('MRK','LONG',327.2532,318.6097,341.6589,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#24</td><td class="tk">DHR</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">318.89</td>
+  <td class="nu" style="color:var(--r)">308.86</td>
+  <td class="nu" style="color:var(--g)">335.59</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">22.3</td>
+  <td class="nu">47.1</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.62%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('DHR','LONG',318.8868,308.8632,335.5928,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#25</td><td class="tk">LMT</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">308.92</td>
+  <td class="nu" style="color:var(--r)">299.99</td>
+  <td class="nu" style="color:var(--g)">323.82</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">12.4</td>
+  <td class="nu">49.5</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.41%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('LMT','LONG',308.9247,299.9881,323.8190,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#26</td><td class="tk">MCD</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">349.38</td>
+  <td class="nu" style="color:var(--r)">339.74</td>
+  <td class="nu" style="color:var(--g)">365.45</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">19.1</td>
+  <td class="nu">53.1</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.30%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('MCD','LONG',349.3829,339.7431,365.4492,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#27</td><td class="tk">BKNG</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">132.64</td>
+  <td class="nu" style="color:var(--r)">129.13</td>
+  <td class="nu" style="color:var(--g)">138.50</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">17.1</td>
+  <td class="nu">49.6</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.21%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('BKNG','LONG',132.6428,129.1294,138.4984,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#28</td><td class="tk">CVX</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">202.25</td>
+  <td class="nu" style="color:var(--r)">196.51</td>
+  <td class="nu" style="color:var(--g)">211.82</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">22.0</td>
+  <td class="nu">56.2</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.36%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('CVX','LONG',202.2539,196.5147,211.8192,70.0)">+Track</button></td>
+</tr>
+<tr class="sr" data-dir="LONG" data-sc="70">
+  <td class="rk">#29</td><td class="tk">OXY</td>
+  <td><span class="badge bl">▲ LONG</span></td>
+  <td class="sc" style="color:#ffee58">70.0</td>
+  <td class="sb"><div class="mb"><div class="mbf" style="width:0%;background:#7e57c2"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#26c6da"></div><span class="mbl">0</span></div><div class="mb"><div class="mbf" style="width:0%;background:#ab47bc"></div><span class="mbl">0</span></div></td>
+  <td><span class="badge bs-cp">CP</span></td>
+  <td class="nu">495.88</td>
+  <td class="nu" style="color:var(--r)">481.81</td>
+  <td class="nu" style="color:var(--g)">519.33</td>
+  <td class="nu" style="color:var(--y);font-weight:700">1.67</td>
+  <td class="nu">16.4</td>
+  <td class="nu">42.7</td>
+  <td class="nu">nanx</td>
+  <td class="nu">2.36%</td>
+  <td style="text-align:center;font-size:11px"><span style="color:var(--mu)">nan</span><br><span style="color:var(--mu)">nan</span></td>
+  <td><button class="btn-tr" onclick="addPos('OXY','LONG',495.8817,481.8144,519.3274,70.0)">+Track</button></td>
+</tr></tbody>
+    </table>
+  </div>
+  <div style="margin-top:24px">
+    <div class="bdt" style="margin-bottom:8px">Distribuzione Score</div>
+    <svg viewBox="0 0 300 88" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:300px"><rect x="10" y="64" width="48" height="0" fill="#ef9a9a" opacity=".85" rx="3"/><text x="34" y="78" text-anchor="middle" font-size="9" fill="#666">50s</text><text x="34" y="61" text-anchor="middle" font-size="9" fill="#ccc"></text><rect x="68" y="64" width="48" height="0" fill="#ffa726" opacity=".85" rx="3"/><text x="92" y="78" text-anchor="middle" font-size="9" fill="#666">60s</text><text x="92" y="61" text-anchor="middle" font-size="9" fill="#ccc"></text><rect x="126" y="22" width="48" height="42" fill="#ffee58" opacity=".85" rx="3"/><text x="150" y="78" text-anchor="middle" font-size="9" fill="#666">70s</text><text x="150" y="19" text-anchor="middle" font-size="9" fill="#ccc">12</text><rect x="184" y="4" width="48" height="60" fill="#69f0ae" opacity=".85" rx="3"/><text x="208" y="78" text-anchor="middle" font-size="9" fill="#666">80s</text><text x="208" y="1" text-anchor="middle" font-size="9" fill="#ccc">17</text><rect x="242" y="64" width="48" height="0" fill="#00e676" opacity=".85" rx="3"/><text x="266" y="78" text-anchor="middle" font-size="9" fill="#666">90s</text><text x="266" y="61" text-anchor="middle" font-size="9" fill="#ccc"></text></svg>
+  </div>
+</div>
+
+<!-- BACKTEST TAB -->
+<div id="tc-backtest" class="tc">
+<div class="kpi-grid"><div class="kpi-card"><div class="kpi-v" style="color:#fff">702</div><div class="kpi-l">Trade Totali</div></div><div class="kpi-card"><div class="kpi-v" style="color:#ef9a9a">45.3%</div><div class="kpi-l">Win Rate</div></div><div class="kpi-card"><div class="kpi-v" style="color:#00e676">1.55</div><div class="kpi-l">Profit Factor</div></div><div class="kpi-card"><div class="kpi-v" style="color:#00e676">+0.30</div><div class="kpi-l">Avg R/R</div></div><div class="kpi-card"><div class="kpi-v" style="color:#00e676">+1689.41%</div><div class="kpi-l">Total PnL</div><div class="kpi-s">1.9 anni</div></div><div class="kpi-card"><div class="kpi-v" style="color:#00e676">+351.42%</div><div class="kpi-l">CAGR</div></div><div class="kpi-card"><div class="kpi-v" style="color:#00e676">2.96</div><div class="kpi-l">Sharpe</div></div><div class="kpi-card"><div class="kpi-v" style="color:#00e676">14.81</div><div class="kpi-l">Sortino</div></div><div class="kpi-card"><div class="kpi-v" style="color:#ff5252">-24.07%</div><div class="kpi-l">Max Drawdown</div></div><div class="kpi-card"><div class="kpi-v" style="color:#ffa726">-6.59%</div><div class="kpi-l">Avg Drawdown</div></div><div class="kpi-card"><div class="kpi-v" style="color:#fff">6.7g</div><div class="kpi-l">Durata media</div></div><div class="kpi-card"><div class="kpi-v" style="color:#fff">1.0%</div><div class="kpi-l">Rischio/trade</div><div class="kpi-s">del capitale</div></div></div>
+<div class="card" style="margin-top:20px">
+  <div class="bdt">Equity Curve — base 100, rischio 1%/trade</div>
+  <div style="padding:6px 0"><svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" style="width:100%"><text x="47" y="184" text-anchor="end" font-size="9" fill="#555">93.8</text><line x1="52" y1="180" x2="664" y2="180" stroke="#1c2535" stroke-width="0.5"/><text x="47" y="130" text-anchor="end" font-size="9" fill="#555">683.1</text><line x1="52" y1="126" x2="664" y2="126" stroke="#1c2535" stroke-width="0.5"/><text x="47" y="76" text-anchor="end" font-size="9" fill="#555">1272.5</text><line x1="52" y1="72" x2="664" y2="72" stroke="#1c2535" stroke-width="0.5"/><text x="47" y="22" text-anchor="end" font-size="9" fill="#555">1861.8</text><line x1="52" y1="18" x2="664" y2="18" stroke="#1c2535" stroke-width="0.5"/><text x="52" y="204" text-anchor="middle" font-size="9" fill="#555">2024-03</text><text x="255" y="204" text-anchor="middle" font-size="9" fill="#555">2024-10</text><text x="460" y="204" text-anchor="middle" font-size="9" fill="#555">2025-07</text><text x="664" y="204" text-anchor="middle" font-size="9" fill="#555">2026-02</text><line x1="52" y1="179.4" x2="664" y2="179.4" stroke="#333" stroke-width="0.8" stroke-dasharray="4,3"/><polygon points="52,180 52.0,179.6 52.9,179.8 53.7,179.3 54.6,179.4 55.5,179.3 56.4,179.3 57.2,179.4 58.1,179.6 59.0,179.7 59.9,179.5 60.7,179.7 61.6,179.4 62.5,179.6 63.3,179.7 64.2,179.9 65.1,179.6 66.0,179.8 66.8,179.5 67.7,179.6 68.6,179.7 69.5,179.5 70.3,179.7 71.2,179.8 72.1,179.7 73.0,179.9 73.8,179.4 74.7,179.2 75.6,179.4 76.4,179.5 77.3,179.4 78.2,179.6 79.1,179.5 79.9,179.7 80.8,179.8 81.7,179.8 82.6,180.0 83.4,179.8 84.3,179.7 85.2,179.4 86.0,179.0 86.9,178.6 87.8,178.8 88.7,178.7 89.5,178.2 90.4,177.9 91.3,178.1 92.2,178.3 93.0,178.5 93.9,178.6 94.8,178.6 95.7,178.4 96.5,177.9 97.4,178.1 98.3,178.3 99.1,178.4 100.0,178.2 100.9,178.3 101.8,178.0 102.6,177.4 103.5,177.3 104.4,177.5 105.3,177.1 106.1,177.3 107.0,177.5 107.9,177.5 108.7,176.9 109.6,176.6 110.5,176.0 111.4,176.2 112.2,176.4 113.1,176.5 114.0,176.2 114.9,176.4 115.7,176.3 116.6,176.5 117.5,176.1 118.4,176.2 119.2,176.5 120.1,176.7 121.0,176.8 121.8,176.5 122.7,176.6 123.6,175.9 124.5,175.9 125.3,175.6 126.2,174.9 127.1,175.1 128.0,174.9 128.8,175.1 129.7,174.9 130.6,175.1 131.4,175.4 132.3,175.1 133.2,174.7 134.1,174.4 134.9,174.2 135.8,174.0 136.7,174.3 137.6,174.2 138.4,174.4 139.3,174.6 140.2,174.9 141.0,175.1 141.9,175.4 142.8,175.6 143.7,175.7 144.5,175.4 145.4,175.5 146.3,175.4 147.2,175.6 148.0,175.9 148.9,176.0 149.8,175.5 150.7,175.7 151.5,175.0 152.4,175.3 153.3,174.9 154.1,175.2 155.0,174.9 155.9,175.0 156.8,175.3 157.6,175.4 158.5,175.5 159.4,175.8 160.3,175.6 161.1,175.7 162.0,175.8 162.9,175.1 163.7,174.9 164.6,175.1 165.5,175.1 166.4,175.2 167.2,175.2 168.1,174.9 169.0,174.2 169.9,174.4 170.7,174.7 171.6,174.4 172.5,174.3 173.4,173.9 174.2,174.1 175.1,174.3 176.0,173.9 176.8,173.1 177.7,173.4 178.6,173.2 179.5,173.4 180.3,172.9 181.2,173.2 182.1,173.4 183.0,173.6 183.8,173.4 184.7,173.1 185.6,173.3 186.4,172.9 187.3,172.3 188.2,172.6 189.1,172.9 189.9,173.1 190.8,173.3 191.7,173.4 192.6,172.9 193.4,173.1 194.3,172.9 195.2,172.9 196.1,173.2 196.9,173.5 197.8,172.7 198.7,172.8 199.5,172.4 200.4,172.3 201.3,171.4 202.2,171.6 203.0,171.8 203.9,171.9 204.8,172.1 205.7,171.6 206.5,170.7 207.4,170.9 208.3,171.0 209.1,170.6 210.0,170.4 210.9,170.4 211.8,170.0 212.6,170.2 213.5,170.3 214.4,170.5 215.3,170.7 216.1,170.8 217.0,171.0 217.9,171.3 218.8,171.6 219.6,171.9 220.5,172.1 221.4,172.4 222.2,172.0 223.1,172.2 224.0,172.1 224.9,172.4 225.7,172.2 226.6,171.7 227.5,172.0 228.4,171.6 229.2,171.7 230.1,171.3 231.0,170.4 231.8,169.4 232.7,169.7 233.6,169.9 234.5,169.1 235.3,168.0 236.2,167.6 237.1,168.0 238.0,167.6 238.8,167.9 239.7,166.8 240.6,166.4 241.4,166.8 242.3,167.2 243.2,167.6 244.1,167.7 244.9,167.9 245.8,167.3 246.7,166.4 247.6,166.2 248.4,166.6 249.3,167.0 250.2,167.1 251.1,167.5 251.9,166.3 252.8,165.1 253.7,165.5 254.5,164.3 255.4,164.1 256.3,163.5 257.2,163.3 258.0,162.6 258.9,162.3 259.8,162.5 260.7,163.0 261.5,163.4 262.4,162.1 263.3,160.7 264.1,161.2 265.0,161.6 265.9,160.2 266.8,160.7 267.6,159.8 268.5,160.3 269.4,160.6 270.3,160.8 271.1,159.9 272.0,160.4 272.9,160.9 273.8,161.4 274.6,160.6 275.5,161.1 276.4,159.8 277.2,159.5 278.1,160.0 279.0,160.3 279.9,160.6 280.7,160.0 281.6,160.5 282.5,160.7 283.4,160.0 284.2,159.5 285.1,157.9 286.0,158.5 286.8,157.9 287.7,157.1 288.6,155.4 289.5,155.7 290.3,156.3 291.2,155.7 292.1,156.3 293.0,154.5 293.8,155.2 294.7,153.3 295.6,151.8 296.5,152.5 297.3,150.8 298.2,149.5 299.1,150.2 299.9,150.9 300.8,151.6 301.7,152.3 302.6,152.6 303.4,152.2 304.3,150.7 305.2,151.0 306.1,150.2 306.9,149.9 307.8,150.6 308.7,149.8 309.5,150.5 310.4,149.5 311.3,148.2 312.2,148.9 313.0,147.8 313.9,148.5 314.8,149.3 315.7,150.0 316.5,148.9 317.4,149.3 318.3,148.5 319.1,146.4 320.0,147.1 320.9,147.2 321.8,146.4 322.6,147.2 323.5,147.9 324.4,148.6 325.3,149.4 326.1,149.7 327.0,147.6 327.9,146.8 328.8,146.4 329.6,147.1 330.5,146.2 331.4,147.0 332.2,147.7 333.1,148.5 334.0,147.2 334.9,146.6 335.7,145.9 336.6,146.3 337.5,146.7 338.4,147.4 339.2,146.4 340.1,147.1 341.0,145.8 341.8,146.6 342.7,146.3 343.6,145.1 344.5,143.6 345.3,141.9 346.2,142.3 347.1,143.1 348.0,140.7 348.8,139.8 349.7,138.7 350.6,139.6 351.5,137.9 352.3,137.0 353.2,136.2 354.1,135.5 354.9,134.2 355.8,135.2 356.7,136.2 357.6,137.1 358.4,136.6 359.3,137.6 360.2,137.8 361.1,136.5 361.9,137.0 362.8,137.4 363.7,136.6 364.5,137.6 365.4,138.5 366.3,137.4 367.2,138.4 368.0,137.7 368.9,138.1 369.8,137.2 370.7,135.9 371.5,136.9 372.4,136.3 373.3,136.8 374.2,135.4 375.0,135.9 375.9,136.8 376.8,135.4 377.6,136.4 378.5,136.9 379.4,137.3 380.3,138.3 381.1,138.7 382.0,138.2 382.9,135.5 383.8,135.7 384.6,133.1 385.5,134.1 386.4,133.3 387.2,133.8 388.1,134.8 389.0,134.8 389.9,134.1 390.7,135.1 391.6,136.1 392.5,133.4 393.4,134.4 394.2,134.3 395.1,134.2 396.0,133.0 396.9,133.5 397.7,134.0 398.6,135.0 399.5,136.0 400.3,134.6 401.2,133.9 402.1,132.1 403.0,133.1 403.8,130.1 404.7,131.2 405.6,129.6 406.5,130.1 407.3,131.2 408.2,132.2 409.1,133.2 409.9,133.7 410.8,134.2 411.7,134.4 412.6,135.3 413.4,135.8 414.3,136.3 415.2,133.7 416.1,134.2 416.9,133.6 417.8,130.6 418.7,131.1 419.5,131.6 420.4,131.0 421.3,129.9 422.2,129.8 423.0,128.4 423.9,129.0 424.8,130.1 425.7,129.3 426.5,130.3 427.4,131.4 428.3,130.7 429.2,128.4 430.0,127.6 430.9,126.3 431.8,124.7 432.6,121.2 433.5,122.4 434.4,123.6 435.3,124.8 436.1,125.4 437.0,126.5 437.9,127.6 438.8,126.0 439.6,127.1 440.5,128.2 441.4,129.3 442.2,130.4 443.1,131.4 444.0,132.4 444.9,131.2 445.7,132.2 446.6,133.2 447.5,134.2 448.4,131.3 449.2,129.3 450.1,130.4 451.0,131.5 451.9,128.4 452.7,127.4 453.6,128.5 454.5,125.9 455.3,122.5 456.2,121.3 457.1,119.9 458.0,121.2 458.8,121.8 459.7,120.4 460.6,118.8 461.5,120.0 462.3,121.3 463.2,119.5 464.1,116.0 464.9,117.3 465.8,117.0 466.7,118.3 467.6,119.6 468.4,120.8 469.3,122.0 470.2,123.2 471.1,119.7 471.9,120.9 472.8,121.5 473.7,120.7 474.6,117.0 475.4,114.1 476.3,114.4 477.2,115.7 478.0,116.4 478.9,113.4 479.8,114.0 480.7,114.7 481.5,116.0 482.4,115.1 483.3,112.8 484.2,114.1 485.0,112.7 485.9,108.6 486.8,109.3 487.6,110.0 488.5,111.4 489.4,108.7 490.3,109.4 491.1,110.1 492.0,111.5 492.9,108.8 493.8,110.2 494.6,109.3 495.5,108.2 496.4,103.9 497.2,105.4 498.1,103.1 499.0,101.3 499.9,99.8 500.7,98.0 501.6,95.2 502.5,96.0 503.4,93.9 504.2,95.6 505.1,93.6 506.0,92.0 506.9,91.7 507.7,93.4 508.6,92.8 509.5,94.5 510.3,96.2 511.2,97.1 512.1,95.3 513.0,93.9 513.8,95.6 514.7,97.3 515.6,92.4 516.5,89.1 517.3,87.5 518.2,84.8 519.1,85.8 519.9,84.0 520.8,85.0 521.7,81.6 522.6,83.5 523.4,80.7 524.3,82.6 525.2,80.6 526.1,77.6 526.9,79.6 527.8,77.8 528.7,71.8 529.6,73.9 530.4,69.1 531.3,65.1 532.2,63.8 533.0,57.0 533.9,55.2 534.8,52.3 535.7,54.7 536.5,50.2 537.4,52.7 538.3,55.2 539.2,57.6 540.0,50.5 540.9,47.6 541.8,42.7 542.6,36.5 543.5,39.3 544.4,41.9 545.3,36.3 546.1,39.0 547.0,39.0 547.9,35.0 548.8,37.7 549.6,29.6 550.5,25.9 551.4,28.8 552.3,20.2 553.1,21.7 554.0,23.2 554.9,26.2 555.7,29.1 556.6,28.1 557.5,25.2 558.4,26.6 559.2,29.6 560.1,32.4 561.0,24.0 561.9,27.0 562.7,29.9 563.6,25.5 564.5,28.4 565.3,24.1 566.2,19.4 567.1,22.4 568.0,18.0 568.8,21.1 569.7,24.1 570.6,27.0 571.5,28.5 572.3,28.6 573.2,31.5 574.1,34.3 575.0,34.7 575.8,36.1 576.7,30.7 577.6,32.1 578.4,34.9 579.3,36.3 580.2,37.7 581.1,33.6 581.9,35.0 582.8,31.3 583.7,34.1 584.6,36.9 585.4,38.2 586.3,40.9 587.2,43.6 588.0,46.2 588.9,48.8 589.8,50.0 590.7,46.4 591.5,47.7 592.4,50.2 593.3,51.5 594.2,47.4 595.0,50.0 595.9,52.5 596.8,48.8 597.6,46.6 598.5,49.1 599.4,51.6 600.3,47.9 601.1,50.5 602.0,51.3 602.9,49.4 603.8,50.6 604.6,51.8 605.5,47.2 606.4,49.8 607.3,51.0 608.1,53.5 609.0,55.9 609.9,58.3 610.7,55.4 611.6,52.2 612.5,53.5 613.4,50.2 614.2,52.7 615.1,49.0 616.0,50.3 616.9,51.5 617.7,48.1 618.6,44.2 619.5,46.8 620.3,48.1 621.2,47.5 622.1,50.1 623.0,52.6 623.8,48.3 624.7,49.6 625.6,52.1 626.5,48.1 627.3,49.4 628.2,50.6 629.1,53.1 630.0,47.8 630.8,50.3 631.7,52.8 632.6,51.6 633.4,54.0 634.3,56.4 635.2,55.7 636.1,58.1 636.9,56.6 637.8,59.0 638.7,56.1 639.6,54.2 640.4,55.4 641.3,57.8 642.2,54.3 643.0,55.5 643.9,54.3 644.8,56.7 645.7,59.1 646.5,56.5 647.4,49.4 648.3,48.2 649.2,50.8 650.0,47.0 650.9,49.6 651.8,46.6 652.7,42.7 653.5,44.0 654.4,36.2 655.3,31.4 656.1,29.4 657.0,32.3 657.9,33.7 658.8,30.1 659.6,32.9 660.5,30.5 661.4,32.1 662.3,27.0 663.1,24.5 664.0,24.6 664.0,180" fill="rgba(0,230,118,0.07)"/><polyline points="52.0,179.6 52.9,179.8 53.7,179.3 54.6,179.4 55.5,179.3 56.4,179.3 57.2,179.4 58.1,179.6 59.0,179.7 59.9,179.5 60.7,179.7 61.6,179.4 62.5,179.6 63.3,179.7 64.2,179.9 65.1,179.6 66.0,179.8 66.8,179.5 67.7,179.6 68.6,179.7 69.5,179.5 70.3,179.7 71.2,179.8 72.1,179.7 73.0,179.9 73.8,179.4 74.7,179.2 75.6,179.4 76.4,179.5 77.3,179.4 78.2,179.6 79.1,179.5 79.9,179.7 80.8,179.8 81.7,179.8 82.6,180.0 83.4,179.8 84.3,179.7 85.2,179.4 86.0,179.0 86.9,178.6 87.8,178.8 88.7,178.7 89.5,178.2 90.4,177.9 91.3,178.1 92.2,178.3 93.0,178.5 93.9,178.6 94.8,178.6 95.7,178.4 96.5,177.9 97.4,178.1 98.3,178.3 99.1,178.4 100.0,178.2 100.9,178.3 101.8,178.0 102.6,177.4 103.5,177.3 104.4,177.5 105.3,177.1 106.1,177.3 107.0,177.5 107.9,177.5 108.7,176.9 109.6,176.6 110.5,176.0 111.4,176.2 112.2,176.4 113.1,176.5 114.0,176.2 114.9,176.4 115.7,176.3 116.6,176.5 117.5,176.1 118.4,176.2 119.2,176.5 120.1,176.7 121.0,176.8 121.8,176.5 122.7,176.6 123.6,175.9 124.5,175.9 125.3,175.6 126.2,174.9 127.1,175.1 128.0,174.9 128.8,175.1 129.7,174.9 130.6,175.1 131.4,175.4 132.3,175.1 133.2,174.7 134.1,174.4 134.9,174.2 135.8,174.0 136.7,174.3 137.6,174.2 138.4,174.4 139.3,174.6 140.2,174.9 141.0,175.1 141.9,175.4 142.8,175.6 143.7,175.7 144.5,175.4 145.4,175.5 146.3,175.4 147.2,175.6 148.0,175.9 148.9,176.0 149.8,175.5 150.7,175.7 151.5,175.0 152.4,175.3 153.3,174.9 154.1,175.2 155.0,174.9 155.9,175.0 156.8,175.3 157.6,175.4 158.5,175.5 159.4,175.8 160.3,175.6 161.1,175.7 162.0,175.8 162.9,175.1 163.7,174.9 164.6,175.1 165.5,175.1 166.4,175.2 167.2,175.2 168.1,174.9 169.0,174.2 169.9,174.4 170.7,174.7 171.6,174.4 172.5,174.3 173.4,173.9 174.2,174.1 175.1,174.3 176.0,173.9 176.8,173.1 177.7,173.4 178.6,173.2 179.5,173.4 180.3,172.9 181.2,173.2 182.1,173.4 183.0,173.6 183.8,173.4 184.7,173.1 185.6,173.3 186.4,172.9 187.3,172.3 188.2,172.6 189.1,172.9 189.9,173.1 190.8,173.3 191.7,173.4 192.6,172.9 193.4,173.1 194.3,172.9 195.2,172.9 196.1,173.2 196.9,173.5 197.8,172.7 198.7,172.8 199.5,172.4 200.4,172.3 201.3,171.4 202.2,171.6 203.0,171.8 203.9,171.9 204.8,172.1 205.7,171.6 206.5,170.7 207.4,170.9 208.3,171.0 209.1,170.6 210.0,170.4 210.9,170.4 211.8,170.0 212.6,170.2 213.5,170.3 214.4,170.5 215.3,170.7 216.1,170.8 217.0,171.0 217.9,171.3 218.8,171.6 219.6,171.9 220.5,172.1 221.4,172.4 222.2,172.0 223.1,172.2 224.0,172.1 224.9,172.4 225.7,172.2 226.6,171.7 227.5,172.0 228.4,171.6 229.2,171.7 230.1,171.3 231.0,170.4 231.8,169.4 232.7,169.7 233.6,169.9 234.5,169.1 235.3,168.0 236.2,167.6 237.1,168.0 238.0,167.6 238.8,167.9 239.7,166.8 240.6,166.4 241.4,166.8 242.3,167.2 243.2,167.6 244.1,167.7 244.9,167.9 245.8,167.3 246.7,166.4 247.6,166.2 248.4,166.6 249.3,167.0 250.2,167.1 251.1,167.5 251.9,166.3 252.8,165.1 253.7,165.5 254.5,164.3 255.4,164.1 256.3,163.5 257.2,163.3 258.0,162.6 258.9,162.3 259.8,162.5 260.7,163.0 261.5,163.4 262.4,162.1 263.3,160.7 264.1,161.2 265.0,161.6 265.9,160.2 266.8,160.7 267.6,159.8 268.5,160.3 269.4,160.6 270.3,160.8 271.1,159.9 272.0,160.4 272.9,160.9 273.8,161.4 274.6,160.6 275.5,161.1 276.4,159.8 277.2,159.5 278.1,160.0 279.0,160.3 279.9,160.6 280.7,160.0 281.6,160.5 282.5,160.7 283.4,160.0 284.2,159.5 285.1,157.9 286.0,158.5 286.8,157.9 287.7,157.1 288.6,155.4 289.5,155.7 290.3,156.3 291.2,155.7 292.1,156.3 293.0,154.5 293.8,155.2 294.7,153.3 295.6,151.8 296.5,152.5 297.3,150.8 298.2,149.5 299.1,150.2 299.9,150.9 300.8,151.6 301.7,152.3 302.6,152.6 303.4,152.2 304.3,150.7 305.2,151.0 306.1,150.2 306.9,149.9 307.8,150.6 308.7,149.8 309.5,150.5 310.4,149.5 311.3,148.2 312.2,148.9 313.0,147.8 313.9,148.5 314.8,149.3 315.7,150.0 316.5,148.9 317.4,149.3 318.3,148.5 319.1,146.4 320.0,147.1 320.9,147.2 321.8,146.4 322.6,147.2 323.5,147.9 324.4,148.6 325.3,149.4 326.1,149.7 327.0,147.6 327.9,146.8 328.8,146.4 329.6,147.1 330.5,146.2 331.4,147.0 332.2,147.7 333.1,148.5 334.0,147.2 334.9,146.6 335.7,145.9 336.6,146.3 337.5,146.7 338.4,147.4 339.2,146.4 340.1,147.1 341.0,145.8 341.8,146.6 342.7,146.3 343.6,145.1 344.5,143.6 345.3,141.9 346.2,142.3 347.1,143.1 348.0,140.7 348.8,139.8 349.7,138.7 350.6,139.6 351.5,137.9 352.3,137.0 353.2,136.2 354.1,135.5 354.9,134.2 355.8,135.2 356.7,136.2 357.6,137.1 358.4,136.6 359.3,137.6 360.2,137.8 361.1,136.5 361.9,137.0 362.8,137.4 363.7,136.6 364.5,137.6 365.4,138.5 366.3,137.4 367.2,138.4 368.0,137.7 368.9,138.1 369.8,137.2 370.7,135.9 371.5,136.9 372.4,136.3 373.3,136.8 374.2,135.4 375.0,135.9 375.9,136.8 376.8,135.4 377.6,136.4 378.5,136.9 379.4,137.3 380.3,138.3 381.1,138.7 382.0,138.2 382.9,135.5 383.8,135.7 384.6,133.1 385.5,134.1 386.4,133.3 387.2,133.8 388.1,134.8 389.0,134.8 389.9,134.1 390.7,135.1 391.6,136.1 392.5,133.4 393.4,134.4 394.2,134.3 395.1,134.2 396.0,133.0 396.9,133.5 397.7,134.0 398.6,135.0 399.5,136.0 400.3,134.6 401.2,133.9 402.1,132.1 403.0,133.1 403.8,130.1 404.7,131.2 405.6,129.6 406.5,130.1 407.3,131.2 408.2,132.2 409.1,133.2 409.9,133.7 410.8,134.2 411.7,134.4 412.6,135.3 413.4,135.8 414.3,136.3 415.2,133.7 416.1,134.2 416.9,133.6 417.8,130.6 418.7,131.1 419.5,131.6 420.4,131.0 421.3,129.9 422.2,129.8 423.0,128.4 423.9,129.0 424.8,130.1 425.7,129.3 426.5,130.3 427.4,131.4 428.3,130.7 429.2,128.4 430.0,127.6 430.9,126.3 431.8,124.7 432.6,121.2 433.5,122.4 434.4,123.6 435.3,124.8 436.1,125.4 437.0,126.5 437.9,127.6 438.8,126.0 439.6,127.1 440.5,128.2 441.4,129.3 442.2,130.4 443.1,131.4 444.0,132.4 444.9,131.2 445.7,132.2 446.6,133.2 447.5,134.2 448.4,131.3 449.2,129.3 450.1,130.4 451.0,131.5 451.9,128.4 452.7,127.4 453.6,128.5 454.5,125.9 455.3,122.5 456.2,121.3 457.1,119.9 458.0,121.2 458.8,121.8 459.7,120.4 460.6,118.8 461.5,120.0 462.3,121.3 463.2,119.5 464.1,116.0 464.9,117.3 465.8,117.0 466.7,118.3 467.6,119.6 468.4,120.8 469.3,122.0 470.2,123.2 471.1,119.7 471.9,120.9 472.8,121.5 473.7,120.7 474.6,117.0 475.4,114.1 476.3,114.4 477.2,115.7 478.0,116.4 478.9,113.4 479.8,114.0 480.7,114.7 481.5,116.0 482.4,115.1 483.3,112.8 484.2,114.1 485.0,112.7 485.9,108.6 486.8,109.3 487.6,110.0 488.5,111.4 489.4,108.7 490.3,109.4 491.1,110.1 492.0,111.5 492.9,108.8 493.8,110.2 494.6,109.3 495.5,108.2 496.4,103.9 497.2,105.4 498.1,103.1 499.0,101.3 499.9,99.8 500.7,98.0 501.6,95.2 502.5,96.0 503.4,93.9 504.2,95.6 505.1,93.6 506.0,92.0 506.9,91.7 507.7,93.4 508.6,92.8 509.5,94.5 510.3,96.2 511.2,97.1 512.1,95.3 513.0,93.9 513.8,95.6 514.7,97.3 515.6,92.4 516.5,89.1 517.3,87.5 518.2,84.8 519.1,85.8 519.9,84.0 520.8,85.0 521.7,81.6 522.6,83.5 523.4,80.7 524.3,82.6 525.2,80.6 526.1,77.6 526.9,79.6 527.8,77.8 528.7,71.8 529.6,73.9 530.4,69.1 531.3,65.1 532.2,63.8 533.0,57.0 533.9,55.2 534.8,52.3 535.7,54.7 536.5,50.2 537.4,52.7 538.3,55.2 539.2,57.6 540.0,50.5 540.9,47.6 541.8,42.7 542.6,36.5 543.5,39.3 544.4,41.9 545.3,36.3 546.1,39.0 547.0,39.0 547.9,35.0 548.8,37.7 549.6,29.6 550.5,25.9 551.4,28.8 552.3,20.2 553.1,21.7 554.0,23.2 554.9,26.2 555.7,29.1 556.6,28.1 557.5,25.2 558.4,26.6 559.2,29.6 560.1,32.4 561.0,24.0 561.9,27.0 562.7,29.9 563.6,25.5 564.5,28.4 565.3,24.1 566.2,19.4 567.1,22.4 568.0,18.0 568.8,21.1 569.7,24.1 570.6,27.0 571.5,28.5 572.3,28.6 573.2,31.5 574.1,34.3 575.0,34.7 575.8,36.1 576.7,30.7 577.6,32.1 578.4,34.9 579.3,36.3 580.2,37.7 581.1,33.6 581.9,35.0 582.8,31.3 583.7,34.1 584.6,36.9 585.4,38.2 586.3,40.9 587.2,43.6 588.0,46.2 588.9,48.8 589.8,50.0 590.7,46.4 591.5,47.7 592.4,50.2 593.3,51.5 594.2,47.4 595.0,50.0 595.9,52.5 596.8,48.8 597.6,46.6 598.5,49.1 599.4,51.6 600.3,47.9 601.1,50.5 602.0,51.3 602.9,49.4 603.8,50.6 604.6,51.8 605.5,47.2 606.4,49.8 607.3,51.0 608.1,53.5 609.0,55.9 609.9,58.3 610.7,55.4 611.6,52.2 612.5,53.5 613.4,50.2 614.2,52.7 615.1,49.0 616.0,50.3 616.9,51.5 617.7,48.1 618.6,44.2 619.5,46.8 620.3,48.1 621.2,47.5 622.1,50.1 623.0,52.6 623.8,48.3 624.7,49.6 625.6,52.1 626.5,48.1 627.3,49.4 628.2,50.6 629.1,53.1 630.0,47.8 630.8,50.3 631.7,52.8 632.6,51.6 633.4,54.0 634.3,56.4 635.2,55.7 636.1,58.1 636.9,56.6 637.8,59.0 638.7,56.1 639.6,54.2 640.4,55.4 641.3,57.8 642.2,54.3 643.0,55.5 643.9,54.3 644.8,56.7 645.7,59.1 646.5,56.5 647.4,49.4 648.3,48.2 649.2,50.8 650.0,47.0 650.9,49.6 651.8,46.6 652.7,42.7 653.5,44.0 654.4,36.2 655.3,31.4 656.1,29.4 657.0,32.3 657.9,33.7 658.8,30.1 659.6,32.9 660.5,30.5 661.4,32.1 662.3,27.0 663.1,24.5 664.0,24.6" fill="none" stroke="#00e676" stroke-width="1.8"/><circle cx="664.0" cy="24.6" r="4" fill="#00e676"/><text x="671.0" y="29" font-size="10" fill="#00e676" font-weight="700">1789.41</text></svg></div>
+</div>
+<div class="bd-grid" style="margin-top:18px"><div class="bds"><div class="bdt">Per evento strutturale</div><table class="btt"><thead><tr><th></th><th class="nu">n</th><th class="nu">WR</th><th class="nu">RR</th><th class="nu">PnL</th></tr></thead><tbody><tr><td>CP</td><td class="nu">238</td><td class="nu" style="color:#ef9a9a">46.6%</td><td class="nu">+0.36</td><td class="nu" style="color:var(--g)">+76.07R</td></tr><tr><td>MOM</td><td class="nu">23</td><td class="nu" style="color:#ffa726">56.5%</td><td class="nu">+0.45</td><td class="nu" style="color:var(--g)">+18.76R</td></tr><tr><td>TF</td><td class="nu">441</td><td class="nu" style="color:#ef9a9a">44.0%</td><td class="nu">+0.27</td><td class="nu" style="color:var(--g)">+213.42R</td></tr></tbody></table></div><div class="bds"><div class="bdt">Per direzione</div><table class="btt"><thead><tr><th></th><th class="nu">n</th><th class="nu">WR</th><th class="nu">RR</th><th class="nu">PnL</th></tr></thead><tbody><tr><td>LONG</td><td class="nu">702</td><td class="nu" style="color:#ef9a9a">45.3%</td><td class="nu">+0.30</td><td class="nu" style="color:var(--g)">+308.24R</td></tr></tbody></table></div><div class="bds"><div class="bdt">Per score bucket</div><table class="btt"><thead><tr><th></th><th class="nu">n</th><th class="nu">WR</th><th class="nu">RR</th><th class="nu">PnL</th></tr></thead><tbody><tr><td>70-79</td><td class="nu">261</td><td class="nu" style="color:#ef9a9a">47.5%</td><td class="nu">+0.36</td><td class="nu" style="color:var(--g)">+94.83R</td></tr><tr><td>80-89</td><td class="nu">441</td><td class="nu" style="color:#ef9a9a">44.0%</td><td class="nu">+0.27</td><td class="nu" style="color:var(--g)">+213.42R</td></tr></tbody></table></div><div class="bds"><div class="bdt">Per durata hold</div><table class="btt"><thead><tr><th></th><th class="nu">n</th><th class="nu">WR</th><th class="nu">RR</th><th class="nu">PnL</th></tr></thead><tbody><tr><td>1-3g</td><td class="nu">217</td><td class="nu" style="color:#ef9a9a">5.1%</td><td class="nu">-0.86</td><td class="nu" style="color:var(--r)">-282.98R</td></tr><tr><td>4-7g</td><td class="nu">174</td><td class="nu" style="color:#ef9a9a">39.1%</td><td class="nu">+0.18</td><td class="nu" style="color:var(--g)">+51.37R</td></tr><tr><td>8+g</td><td class="nu">311</td><td class="nu" style="color:#69f0ae">76.8%</td><td class="nu">+1.19</td><td class="nu" style="color:var(--g)">+539.86R</td></tr></tbody></table></div><div class="bds"><div class="bdt">Per exit reason</div><table class="btt"><thead><tr><th></th><th class="nu">n</th><th class="nu">WR</th><th class="nu">RR</th><th class="nu">PnL</th></tr></thead><tbody><tr><td>STOP</td><td class="nu">368</td><td class="nu" style="color:#ef9a9a">0.0%</td><td class="nu">-1.00</td><td class="nu" style="color:var(--r)">-554.40R</td></tr><tr><td>T2</td><td class="nu">87</td><td class="nu" style="color:#00e676">100.0%</td><td class="nu">+3.00</td><td class="nu" style="color:var(--g)">+380.70R</td></tr><tr><td>TIMEOUT</td><td class="nu">122</td><td class="nu" style="color:#00e676">86.9%</td><td class="nu">+1.22</td><td class="nu" style="color:var(--g)">+227.33R</td></tr><tr><td>TRAIL</td><td class="nu">125</td><td class="nu" style="color:#00e676">100.0%</td><td class="nu">+1.38</td><td class="nu" style="color:var(--g)">+254.62R</td></tr></tbody></table></div></div>
+</div>
+
+<!-- POSITIONS TAB -->
+<div id="tc-positions" class="tc">
+  <div style="font-size:11px;color:var(--mu);margin-bottom:16px;max-width:600px">
+    Aggiungi posizioni con il bottone <strong>+Track</strong> nel tab Scan,
+    oppure manualmente qui sotto. I dati restano in memoria per questa sessione.
+  </div>
+  <button class="btn-act" onclick="toggleForm()">+ Aggiungi manualmente</button>
+  <div id="form-pos" class="form-grid hidden">
+    <label class="fl">Ticker <input id="f-tk" placeholder="AAPL" maxlength="6"></label>
+    <label class="fl">Direzione
+      <select id="f-dir">
+        <option value="LONG">▲ LONG</option>
+        <option value="SHORT">▼ SHORT</option>
+      </select>
+    </label>
+    <label class="fl">Entry    <input id="f-ep" type="number" step="0.01" placeholder="150.00"></label>
+    <label class="fl">Stop     <input id="f-sl" type="number" step="0.01" placeholder="145.00"></label>
+    <label class="fl">Target 1 <input id="f-t1" type="number" step="0.01" placeholder="158.00"></label>
+    <label class="fl">Score    <input id="f-sc" type="number" step="0.1"  placeholder="72.5"></label>
+    <button class="btn-act" onclick="saveForm()" style="margin-top:0;align-self:flex-end">Salva</button>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:12px;font-weight:600;color:#fff">
+        Posizioni aperte (<span id="pos-n">0</span>)
+      </span>
+      <button class="btn-del" onclick="clearPos()" style="border-color:var(--r);color:var(--r)">
+        Cancella tutto
+      </button>
+    </div>
+    <div id="pos-list"><div class="pos-empty">Nessuna posizione aperta.</div></div>
+  </div>
+</div>
+
+<script>
+function showTab(id,el){
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('act'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('act'));
+  document.getElementById('tc-'+id).classList.add('act');
+  el.classList.add('act');
+}
+let _dir=null,_evt=null,_minSc=0;
+function applyF(){
+  document.querySelectorAll('tr.sr').forEach(r=>{
+    const d=r.dataset.dir, sc=parseFloat(r.dataset.sc||0);
+    const et=r.querySelector('.bc-u,.bc-d,.bb-u,.bb-d,.bs-tf,.bs-cp,.bs-mom,.bs-mr');
+    const ev=et?et.textContent:'';
+    let ok=true;
+    if(_dir&&d!==_dir)ok=false;
+    if(_evt&&!ev.includes(_evt))ok=false;
+    if(sc<_minSc)ok=false;
+    r.classList.toggle('hidden',!ok);
+  });
+}
+function fAll(){_dir=null;_evt=null;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('act','act-g','act-r'));
+  document.getElementById('fb-all').classList.add('act');applyF();}
+function fDir(d){_dir=_dir===d?null:d;
+  ['fb-long','fb-short'].forEach(id=>document.getElementById(id).classList.remove('act-g','act-r'));
+  if(_dir==='LONG')document.getElementById('fb-long').classList.add('act-g');
+  if(_dir==='SHORT')document.getElementById('fb-short').classList.add('act-r');applyF();}
+function fEvt(e){_evt=_evt===e?null:e;
+  ['fb-ch','fb-bo'].forEach(id=>document.getElementById(id).classList.remove('act'));
+  if(_evt==='CHoCH')document.getElementById('fb-ch').classList.add('act');
+  if(_evt==='BOS')document.getElementById('fb-bo').classList.add('act');applyF();}
+function fSc(v){_minSc=parseInt(v);
+  document.getElementById('sc-lbl').textContent='Score ≥ '+v;applyF();}
+
+let positions=[];
+function addPos(tk,dir,entry,stop,t1,score){
+  if(positions.find(p=>p.tk===tk&&p.dir===dir)){alert(tk+' '+dir+' già presente');return;}
+  positions.push({id:Date.now(),tk,dir,entry,stop,t1,score,date:new Date().toLocaleDateString('it-IT')});
+  renderPos();
+  showTab('positions',document.querySelectorAll('.tab')[2]);
+}
+function delPos(id){positions=positions.filter(p=>p.id!==id);renderPos();}
+function clearPos(){if(confirm('Cancellare tutto?')){positions=[];renderPos();}}
+function toggleForm(){document.getElementById('form-pos').classList.toggle('hidden');}
+function saveForm(){
+  const tk=document.getElementById('f-tk').value.trim().toUpperCase();
+  const dir=document.getElementById('f-dir').value;
+  const ep=parseFloat(document.getElementById('f-ep').value);
+  const sl=parseFloat(document.getElementById('f-sl').value);
+  const t1=parseFloat(document.getElementById('f-t1').value);
+  const sc=parseFloat(document.getElementById('f-sc').value||0);
+  if(!tk||isNaN(ep)||isNaN(sl)||isNaN(t1)){alert('Compila Ticker, Entry, Stop, T1');return;}
+  addPos(tk,dir,ep,sl,t1,sc);
+  ['f-tk','f-ep','f-sl','f-t1','f-sc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('form-pos').classList.add('hidden');
+}
+function renderPos(){
+  const el=document.getElementById('pos-list');
+  document.getElementById('pos-n').textContent=positions.length;
+  if(!positions.length){el.innerHTML='<div class="pos-empty">Nessuna posizione aperta.</div>';return;}
+  el.innerHTML=positions.map(p=>{
+    const risk=Math.abs(p.entry-p.stop),rew=Math.abs(p.t1-p.entry);
+    const rr=(rew/Math.max(risk,1e-6)).toFixed(2);
+    const db=p.dir==='LONG'?'<span class="badge bl">▲ LONG</span>':'<span class="badge br">▼ SHORT</span>';
+    return `<div class="pos-row">
+      <span class="pos-tk">${p.tk}</span>${db}
+      <span style="color:var(--mu);font-size:11px">entry=${p.entry.toFixed(2)}</span>
+      <span style="color:var(--r);font-size:11px">stop=${p.stop.toFixed(2)}</span>
+      <span style="color:var(--g);font-size:11px">T1=${p.t1.toFixed(2)}</span>
+      <span style="color:var(--y);font-size:11px;font-weight:700">R/R=${rr}</span>
+      <span style="color:var(--mu);font-size:10px">score=${p.score}</span>
+      <span style="color:var(--mu);font-size:10px">${p.date}</span>
+      <button class="btn-del" onclick="delPos(${p.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+renderPos();
+</script>
+</body>
+</html>

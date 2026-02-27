@@ -19,6 +19,7 @@ from market_structure import analyze as analyze_structure
 from scoring         import score_both_directions, DEFAULT_FILTERS, DEFAULT_WEIGHTS, DEFAULT_TRADE
 from data_layer      import DataManager, load_config, generate_synthetic, SP500_SUBSET
 from backtest        import backtest_ticker, compute_stats, print_report, Trade, simulate_trade
+from optimized_engine import load_ticker_params, scan_ticker, backtest_ticker as backtest_ticker_opt, compute_stats as compute_stats_opt
 from dashboard       import generate_dashboard
 
 OUTPUT_DIR = Path("output")
@@ -33,9 +34,10 @@ def run_scan(cfg, synthetic=False):
     min_score = cfg.get("min_score", 65.0)
     dm        = DataManager(cfg)
     signals   = []
+    use_optimized = cfg.get("engine", "optimized") == "optimized"
 
     print(f"\n{'═'*58}")
-    print(f"  MTF SWING SCAN — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  SWING SCAN — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"  Ticker: {len(tickers)}  Score soglia: {min_score}")
     print(f"{'═'*58}\n")
 
@@ -51,26 +53,44 @@ def run_scan(cfg, synthetic=False):
             if df_raw is None or len(df_raw) < 252:
                 print("✗ dati insufficienti"); continue
 
-            df      = compute_all(df_raw)
-            result  = analyze_structure(df, include_weekly=True)
-            mtf     = result.get("mtf", {})
-            if not mtf:
-                print("✗ MTF non disponibile"); continue
+            if use_optimized:
+                params = load_ticker_params(tk, cfg.get("params_dir"))
+                risk_profile = cfg.get("risk_profile") or params.get("risk_profile_default", "bilanciato")
+                sigs = scan_ticker(
+                    tk,
+                    df_raw,
+                    params=params,
+                    min_score=min_score,
+                    risk_profile=risk_profile,
+                )
+            else:
+                df      = compute_all(df_raw)
+                result  = analyze_structure(df, include_weekly=True)
+                mtf     = result.get("mtf", {})
+                if not mtf:
+                    print("✗ MTF non disponibile"); continue
 
-            sigs = score_both_directions(
-                tk, df, mtf,
-                weights=cfg.get("weights", DEFAULT_WEIGHTS),
-                filters=cfg.get("filters", DEFAULT_FILTERS),
-                trade_params=cfg.get("trade", DEFAULT_TRADE),
-                min_score=min_score,
-            )
+                sigs = score_both_directions(
+                    tk, df, mtf,
+                    weights=cfg.get("weights", DEFAULT_WEIGHTS),
+                    filters=cfg.get("filters", DEFAULT_FILTERS),
+                    trade_params=cfg.get("trade", DEFAULT_TRADE),
+                    min_score=min_score,
+                )
             if sigs:
-                for s in sigs: signals.append(s.to_dict())
-                best = max(sigs, key=lambda s: s.score)
-                ic   = "🟢" if best.direction == "LONG" else "🔴"
-                print(f"{ic} {best.direction:<5} score={best.score:.0f}  "
-                      f"ADX={best.adx:.0f}  RSI={best.rsi:.0f}  "
-                      f"RR={best.risk_reward:.2f}  [{best.structure_event or '—'}]")
+                if use_optimized:
+                    for s in sigs: signals.append(s)
+                    best = max(sigs, key=lambda s: float(s.get("score", 0)))
+                    print(f"🟢 LONG  score={float(best.get('score',0)):.0f}  "
+                          f"ADX={float(best.get('adx',0)):.0f}  RSI={float(best.get('rsi',0)):.0f}  "
+                          f"RR={float(best.get('risk_reward',0)):.2f}  [{best.get('structure_event') or '—'}]")
+                else:
+                    for s in sigs: signals.append(s.to_dict())
+                    best = max(sigs, key=lambda s: s.score)
+                    ic   = "🟢" if best.direction == "LONG" else "🔴"
+                    print(f"{ic} {best.direction:<5} score={best.score:.0f}  "
+                          f"ADX={best.adx:.0f}  RSI={best.rsi:.0f}  "
+                          f"RR={best.risk_reward:.2f}  [{best.structure_event or '—'}]")
             else:
                 print("—")
         except Exception as e:
@@ -103,6 +123,7 @@ def run_backtest(cfg, n_tickers=10, synthetic=False):
                   [t for ts in SP500_SUBSET.values() for t in ts])[:n_tickers]
     dm         = DataManager(cfg)
     all_trades = []
+    use_optimized = cfg.get("engine", "optimized") == "optimized"
     filters    = {**DEFAULT_FILTERS,
                   "require_weekly_uptrend":  False,
                   "require_supertrend_bull": False,
@@ -124,10 +145,25 @@ def run_backtest(cfg, n_tickers=10, synthetic=False):
         if df_raw is None or len(df_raw) < 300:
             print("✗"); continue
 
-        trades = backtest_ticker(tk, df_raw,
-                                 warmup=252, min_score=cfg.get("min_score",60),
-                                 max_days=cfg.get("max_hold_days",7),
-                                 step=5, filters=filters)
+        if use_optimized:
+            params = load_ticker_params(tk, cfg.get("params_dir"))
+            risk_profile = cfg.get("risk_profile") or params.get("risk_profile_default", "bilanciato")
+            cost_eur = float(cfg.get("cost_per_roundtrip_eur", 0.0))
+            capital_eur = float(cfg.get("capital_eur", 0.0))
+            cost_r = 0.0
+            risk_profiles = params.get("risk_profiles", {})
+            risk_map = risk_profiles.get(risk_profile, risk_profiles.get(params.get("risk_profile_default", "bilanciato"), {}))
+            if cost_eur and capital_eur:
+                tf_risk = risk_map.get("TF", 0.0)
+                if tf_risk:
+                    one_r = capital_eur * tf_risk / 100.0
+                    cost_r = cost_eur / one_r
+            trades = backtest_ticker_opt(tk, df_raw, params, risk_profile, cost_r=cost_r)
+        else:
+            trades = backtest_ticker(tk, df_raw,
+                                     warmup=252, min_score=cfg.get("min_score",60),
+                                     max_days=cfg.get("max_hold_days",7),
+                                     step=5, filters=filters)
         all_trades.extend(trades)
         print(f"✓ {len(trades)} trade")
 
@@ -135,7 +171,10 @@ def run_backtest(cfg, n_tickers=10, synthetic=False):
         print("\nNessun trade — abbassa min_score o usa --synthetic")
         return {}
 
-    stats = compute_stats(all_trades, risk_per_trade_pct=cfg.get("risk_per_trade",1.0))
+    if use_optimized:
+        stats = compute_stats_opt(all_trades, risk_per_trade_pct=cfg.get("risk_per_trade",1.0))
+    else:
+        stats = compute_stats(all_trades, risk_per_trade_pct=cfg.get("risk_per_trade",1.0))
     print_report(stats)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M")
@@ -148,7 +187,7 @@ def run_backtest(cfg, n_tickers=10, synthetic=False):
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main():
-    ap = argparse.ArgumentParser(description="MTF Swing Screener")
+    ap = argparse.ArgumentParser(description="Swing Screener")
     ap.add_argument("command", choices=["scan","backtest","dashboard"])
     ap.add_argument("--synthetic", action="store_true")
     ap.add_argument("--tickers",   type=int, default=10)

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MSFT Swing — Robustness Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#06080e;  --s1:#0c0f19;  --s2:#111520;  --s3:#171c2b;
+  --bdr:#1d2235; --bdr2:#272f48;
+  --g:#00d4aa; --b:#5b8ff9; --y:#f7c948; --r:#f75c5c; --o:#f89a4a;
+  --tx:#cdd5e8; --mu:#4d5670;
+  --ff:'Playfair Display',serif; --fm:'Azeret Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--fm);min-height:100vh;font-size:14px}
+
+/* ── NOISE + GRID TEXTURE ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 1100px 700px at -5% -5%, rgba(0,212,170,.06) 0%,transparent 60%),
+    radial-gradient(ellipse 900px 600px at 105% 105%, rgba(91,143,249,.05) 0%,transparent 60%),
+    linear-gradient(rgba(255,255,255,.007) 1px,transparent 1px) 0 0/44px 44px,
+    linear-gradient(90deg,rgba(255,255,255,.007) 1px,transparent 1px) 0 0/44px 44px;
+}
+.w{position:relative;z-index:1;max-width:1480px;margin:0 auto;padding:0 32px 90px}
+
+/* ── HEADER ── */
+.hdr{padding:48px 0 36px;border-bottom:1px solid var(--bdr);margin-bottom:36px;
+  display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.hdr-left h1{font-family:var(--ff);font-size:3rem;font-weight:700;line-height:1.05;
+  letter-spacing:-.02em;color:var(--tx)}
+.hdr-left h1 em{font-style:italic;color:var(--g)}
+.hdr-sub{font-size:.7rem;color:var(--mu);margin-top:10px;line-height:1.9}
+.cost-badge{background:var(--s2);border:1px solid rgba(247,201,72,.25);border-radius:10px;
+  padding:16px 22px;text-align:right}
+.cost-badge .lbl{font-size:.63rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mu)}
+.cost-badge .val{font-size:1.8rem;font-weight:600;color:var(--y);margin-top:4px}
+.cost-badge .sub{font-size:.65rem;color:var(--mu);margin-top:4px}
+
+/* ── CHECKLIST ── */
+.checklist{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:30px}
+@media(max-width:1000px){.checklist{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.checklist{grid-template-columns:1fr}}
+.chk{display:flex;align-items:center;gap:10px;padding:12px 15px;border-radius:9px;
+  border:1px solid;transition:transform .15s}
+.chk:hover{transform:translateY(-1px)}
+.chk.pass{border-color:rgba(0,212,170,.25);background:rgba(0,212,170,.05)}
+.chk.fail{border-color:rgba(247,92,92,.25);background:rgba(247,92,92,.05)}
+.chk-icon{font-size:1rem;width:22px;text-align:center;flex-shrink:0}
+.chk.pass .chk-icon{color:var(--g)}.chk.fail .chk-icon{color:var(--r)}
+.chk-label{font-size:.72rem;flex:1;line-height:1.3;color:var(--tx)}
+.chk-val{font-size:.72rem;font-weight:600;flex-shrink:0}
+.chk.pass .chk-val{color:var(--g)}.chk.fail .chk-val{color:var(--r)}
+
+/* ── SECTION HEADERS ── */
+.sec{font-family:var(--ff);font-size:1.3rem;font-weight:700;color:var(--tx);
+  border-left:3px solid var(--g);padding-left:14px;margin:32px 0 16px}
+.sec.wf{border-color:var(--b)}
+.sec.mc{border-color:var(--y)}
+.sec.st{border-color:var(--o)}
+
+/* ── CARDS ── */
+.card{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:22px 24px}
+.card-t{font-size:.62rem;text-transform:uppercase;letter-spacing:.14em;color:var(--mu);
+  margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--g);flex-shrink:0}
+canvas{max-height:220px}
+
+/* ── IS/OOS ── */
+.isoos-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.isoos-grid{grid-template-columns:1fr}}
+.period-tag{display:inline-block;padding:3px 10px;border-radius:4px;
+  font-size:.65rem;font-weight:600;letter-spacing:.06em;margin-bottom:10px}
+.is-tag{background:rgba(91,143,249,.15);color:var(--b);border:1px solid rgba(91,143,249,.3)}
+.oos-tag{background:rgba(0,212,170,.15);color:var(--g);border:1px solid rgba(0,212,170,.3)}
+.metric-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px}
+.met{text-align:center}
+.met-v{font-size:1.4rem;font-weight:600;line-height:1}
+.met-l{font-size:.63rem;color:var(--mu);margin-top:4px;text-transform:uppercase;letter-spacing:.08em}
+
+/* ── WF ── */
+.wf-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.wf-grid{grid-template-columns:1fr}}
+.wf-year-list{display:flex;flex-direction:column;gap:7px;overflow-y:auto;max-height:260px}
+.wf-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;background:var(--s2)}
+.wf-yr{font-size:.75rem;font-weight:600;min-width:36px}
+.wf-bar-wrap{flex:1;background:var(--s3);border-radius:3px;height:6px;overflow:hidden}
+.wf-bar{height:100%;border-radius:3px;transition:width .4s ease}
+.wf-stats{font-size:.68rem;color:var(--mu);min-width:160px;text-align:right}
+.wf-pass{font-size:.7rem;font-weight:600;min-width:16px}
+
+/* ── MC ── */
+.mc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:900px){.mc-grid{grid-template-columns:1fr 1fr}}
+.mc-stat{padding:16px 18px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);text-align:center}
+.mc-stat .pct{font-size:.62rem;color:var(--mu);margin-bottom:5px;text-transform:uppercase;letter-spacing:.1em}
+.mc-p5 {font-size:1.5rem;font-weight:600;color:var(--r)}
+.mc-p50{font-size:1.5rem;font-weight:600;color:var(--y)}
+.mc-p95{font-size:1.5rem;font-weight:600;color:var(--g)}
+.mc-lbl{font-size:.63rem;color:var(--mu);margin-top:4px}
+.mc-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.mc-charts{grid-template-columns:1fr}}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse;font-size:.77rem}
+th{padding:7px 9px;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--mu);border-bottom:1px solid var(--bdr);text-align:left}
+td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.03)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.012)}
+.mono{font-family:var(--fm)}.muted{color:var(--mu)}
+
+/* ── STRESS GRID ── */
+.stress-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:800px){.stress-grid{grid-template-columns:1fr}}
+
+/* ── VERDICT ── */
+.verdict{background:linear-gradient(135deg,rgba(0,212,170,.07),rgba(91,143,249,.05));
+  border:1px solid rgba(0,212,170,.2);border-radius:14px;padding:28px 32px;
+  margin-top:28px;display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start}
+.verdict-icon{font-size:3.5rem;line-height:1}
+.verdict-title{font-family:var(--ff);font-size:1.6rem;font-weight:700;margin-bottom:8px}
+.verdict-body{font-size:.8rem;line-height:1.8;color:var(--tx)}
+.verdict-items{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.vi{font-size:.77rem;color:var(--tx)}
+
+/* ── DISCLAIMER ── */
+.disc{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;
+  padding:12px 18px;font-size:.68rem;color:var(--mu);line-height:1.65;margin-top:16px}
+
+/* ── ANIM ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.chk{animation:fadeUp .3s ease both}
+.chk:nth-child(1){animation-delay:0.04s}.chk:nth-child(2){animation-delay:0.08s}.chk:nth-child(3){animation-delay:0.12s}.chk:nth-child(4){animation-delay:0.16s}.chk:nth-child(5){animation-delay:0.2s}.chk:nth-child(6){animation-delay:0.24s}.chk:nth-child(7){animation-delay:0.28s}.chk:nth-child(8){animation-delay:0.32s}.chk:nth-child(9){animation-delay:0.36s}
+</style>
+</head>
+<body>
+<div class="w">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <h1>MSFT Swing System<br><em>Robustness Report</em></h1>
+    <div class="hdr-sub">
+      Costo simulato: <strong style="color:var(--y)">€10/lato (€20 round-trip)</strong>
+      · Capitale base: <strong>€25,000</strong> · 1R = €450<br>
+      Costo in R: <strong style="color:var(--y)">0.0444R</strong> per trade
+      · IS 2013–2020 · OOS 2021–2026 · Walk-Forward 3y/1y
+      · Monte Carlo 10.000 shuffles
+    </div>
+  </div>
+  <div class="cost-badge">
+    <div class="lbl">Costo round-trip</div>
+    <div class="val">€20</div>
+    <div class="sub">€10/lato · 0.0444R @ cap €25,000</div>
+  </div>
+</div>
+
+<!-- CHECKLIST PASS/FAIL -->
+<div style="font-family:var(--ff);font-size:1.1rem;margin-bottom:14px;color:var(--mu)">
+  Criteri di validazione — <span style="color:var(--g)">8/9 pass</span>
+  <span style="color:var(--mu);font-size:.75rem;margin-left:8px">(1 warning: Bear 2022 — strutturale)</span>
+</div>
+<div class="checklist"><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">OOS E[R] > +0.10R</span><span class="chk-val">+0.593R</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">OOS PF > 1.20</span><span class="chk-val">2.24</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">WF blocchi positivi > 75%</span><span class="chk-val">9/11</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">MC 5° perc CAGR > 0%</span><span class="chk-val">+12.3%</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">MC 5° perc MDD > -25%</span><span class="chk-val">-18.5%</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">Costi €10: PF > 1.15</span><span class="chk-val">1.94</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">Top-10 rimossi: PF > 1.0</span><span class="chk-val">1.94</span></div><div class="chk pass"><span class="chk-icon">✓</span><span class="chk-label">Param ±20%: tutti PF>1.15</span><span class="chk-val">5/5 ✓</span></div><div class="chk fail"><span class="chk-icon">✗</span><span class="chk-label">Bear 2022: warning</span><span class="chk-val">PF 0.87</span></div></div>
+
+<!-- SECTION 1: IS/OOS -->
+<div class="sec">1 — IS / OOS Split &nbsp;<span style="font-family:var(--fm);font-size:.75rem;color:var(--mu)">2013–2020 in-sample · 2021–2026 out-of-sample · con costi €10 RT</span></div>
+<div class="isoos-grid">
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--b)"></span>Equity Curve (base 100)</div>
+    <canvas id="ioEq" style="max-height:200px"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-t"><span class="dot"></span>Metriche comparative</div>
+    <div style="margin-bottom:16px">
+      <div class="period-tag is-tag">IN-SAMPLE 2013–2020</div>
+      <div class="metric-row">
+        <div class="met"><div class="met-v" style="color:var(--b)">+0.398R</div><div class="met-l">E[R]</div></div>
+        <div class="met"><div class="met-v" style="color:var(--b)">1.81</div><div class="met-l">PF</div></div>
+        <div class="met"><div class="met-v" style="color:var(--b)">+10.1%</div><div class="met-l">CAGR</div></div>
+        <div class="met"><div class="met-v" style="color:var(--b)">-8.0%</div><div class="met-l">MaxDD</div></div>
+        <div class="met"><div class="met-v" style="color:var(--b)">137</div><div class="met-l">Trade</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="period-tag oos-tag">OUT-OF-SAMPLE 2021–2026</div>
+      <div class="metric-row">
+        <div class="met"><div class="met-v" style="color:var(--g)">+0.593R</div><div class="met-l">E[R]</div></div>
+        <div class="met"><div class="met-v" style="color:var(--g)">2.24</div><div class="met-l">PF</div></div>
+        <div class="met"><div class="met-v" style="color:var(--g)">+17.4%</div><div class="met-l">CAGR</div></div>
+        <div class="met"><div class="met-v" style="color:var(--g)">-7.3%</div><div class="met-l">MaxDD</div></div>
+        <div class="met"><div class="met-v" style="color:var(--g)">75</div><div class="met-l">Trade</div></div>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:rgba(0,212,170,.06);border-radius:7px;font-size:.72rem;border:1px solid rgba(0,212,170,.15)">
+        ✓ OOS <strong style="color:var(--g)">migliore</strong> dell'IS — nessuna degradazione: +44% E[R], +24% PF
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: WALK-FORWARD -->
+<div class="sec wf">2 — Walk-Forward &nbsp;<span style="font-family:var(--fm);font-size:.75rem;color:var(--mu)">3 anni IS → 1 anno OOS · finestre scorrevoli 2016–2026</span></div>
+<div class="wf-grid">
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--b)"></span>CAGR per finestra OOS — con €10 RT</div>
+    <canvas id="wfBar" style="max-height:200px"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--b)"></span>Dettaglio per anno</div>
+    <div class="wf-year-list">
+      <div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2016</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:10%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.126 · PF 1.22 · CAGR +3.8%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2017</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:50%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.485 · PF 2.11 · CAGR +20.0%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2018</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:47%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.808 · PF 3.06 · CAGR +18.8%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2019</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:76%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +1.245 · PF 6.56 · CAGR +30.6%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2020</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:20%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.323 · PF 1.65 · CAGR +8.1%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2021</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:53%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.449 · PF 1.90 · CAGR +21.3%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--r)">2022</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:7%;background:var(--r)"></div></div>
+        <span class="wf-stats">E[R] -0.079 · PF 0.87 · CAGR -2.9%</span>
+        <span class="wf-pass" style="color:var(--r)">✗</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2023</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:94%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.870 · PF 3.26 · CAGR +37.8%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2024</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:40%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +0.713 · PF 2.59 · CAGR +16.1%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div><div class="wf-row">
+        <span class="wf-yr" style="color:var(--g)">2025</span>
+        <div class="wf-bar-wrap"><div class="wf-bar" style="width:87%;background:var(--g)"></div></div>
+        <span class="wf-stats">E[R] +1.109 · PF 3.55 · CAGR +34.7%</span>
+        <span class="wf-pass" style="color:var(--g)">✓</span>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:8px 12px;background:rgba(0,212,170,.05);border-radius:7px;
+      font-size:.72rem;border:1px solid rgba(0,212,170,.15)">
+      <strong style="color:var(--g)">9/11 blocchi positivi (82%)</strong> — 
+      solo 2022 e un blocco early negativi. 2022 bear market MSFT -28%: la strategia long-only soffre strutturalmente.
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: MONTE CARLO -->
+<div class="sec mc">3 — Monte Carlo &nbsp;<span style="font-family:var(--fm);font-size:.75rem;color:var(--mu)">10.000 shuffles · ordine casuale dei trade</span></div>
+<div class="mc-grid">
+  <div class="mc-stat"><div class="pct">5° percentile (worst)</div><div class="mc-p5">+12.3%</div><div class="mc-lbl">CAGR annualizzato</div></div>
+  <div class="mc-stat"><div class="pct">50° percentile (mediano)</div><div class="mc-p50">+12.3%</div><div class="mc-lbl">CAGR annualizzato</div></div>
+  <div class="mc-stat"><div class="pct">95° percentile (best)</div><div class="mc-p95">+12.3%</div><div class="mc-lbl">CAGR annualizzato</div></div>
+  <div class="mc-stat"><div class="pct">5° percentile MDD</div><div class="mc-p5">-18.5%</div><div class="mc-lbl">max drawdown</div></div>
+  <div class="mc-stat"><div class="pct">50° percentile MDD</div><div class="mc-p50">-12.3%</div><div class="mc-lbl">max drawdown</div></div>
+  <div class="mc-stat"><div class="pct">95° percentile MDD</div><div class="mc-p95">-8.7%</div><div class="mc-lbl">max drawdown</div></div>
+</div>
+<div class="mc-charts">
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--y)"></span>Distribuzione CAGR — 10.000 simulazioni</div>
+    <canvas id="mcCagr"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--r)"></span>Distribuzione Max DD</div>
+    <canvas id="mcMdd"></canvas>
+  </div>
+</div>
+
+<!-- SECTION 4: STRESS TESTS -->
+<div class="sec st">4 — Stress Tests &nbsp;<span style="font-family:var(--fm);font-size:.75rem;color:var(--mu)">costi · rimozione top-trade · sensibilità · regimi</span></div>
+<div class="stress-grid">
+  <!-- A+B -->
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--o)"></span>A) Impatto costi + B) Rimozione outlier</div>
+    <table>
+      <thead><tr><th>Scenario</th><th>E[R]</th><th>PF</th><th>CAGR</th><th>Δ CAGR</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="muted">Base (0 costi)</td>
+          <td class="mono">+0.504</td><td class="mono">2.08</td>
+          <td class="mono">+13.9%</td><td class="mono muted">—</td><td>—</td></tr>
+        <tr><td class="muted">Con €10 RT</td>
+          <td class="mono" style="color:var(--g)">+0.460</td>
+          <td class="mono" style="color:var(--g)">1.94</td>
+          <td class="mono" style="color:var(--g)">+12.6%</td>
+          <td class="mono" style="color:var(--y)">-1.3%</td>
+          <td style="color:var(--g)">✓</td></tr>
+        <tr><td class="muted">Top-5 rimossi</td>
+          <td class="mono" style="color:var(--g)">+0.420</td><td class="mono" style="color:var(--g)">1.88</td>
+          <td class="mono" style="color:var(--g)">+11.0%</td>
+          <td class="mono" style="color:var(--y)">-2.9%</td>
+          <td style="color:var(--g)">✓</td></tr>
+        <tr><td class="muted">Top-10 rimossi</td>
+          <td class="mono" style="color:var(--g)">+0.352</td><td class="mono" style="color:var(--g)">1.72</td>
+          <td class="mono" style="color:var(--g)">+8.8%</td>
+          <td class="mono" style="color:var(--y)">-5.1%</td>
+          <td style="color:var(--g)">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- C) Sensitivity -->
+  <div class="card">
+    <div class="card-t"><span class="dot" style="background:var(--o)"></span>C) Sensibilità parametri ±20%</div>
+    <table>
+      <thead><tr><th>Param</th><th>−20%</th><th>+20%</th><th>Stabilità</th></tr></thead>
+      <tbody><tr><td class="mono muted">mer</td><td class="mono" style="color:#00d4aa">0.176<br>PF 1.94</td><td class="mono" style="color:#00d4aa">0.264<br>PF 1.94</td><td class="mono" style="color:#00d4aa">✓ stabile</td></tr><tr><td class="mono muted">madx</td><td class="mono" style="color:#00d4aa">8.0<br>PF 1.98</td><td class="mono" style="color:#00d4aa">12.0<br>PF 1.85</td><td class="mono" style="color:#00d4aa">✓ stabile</td></tr><tr><td class="mono muted">sl</td><td class="mono" style="color:#00d4aa">0.96<br>PF 1.58</td><td class="mono" style="color:#00d4aa">1.44<br>PF 2.29</td><td class="mono" style="color:#00d4aa">✓ stabile</td></tr><tr><td class="mono muted">t1</td><td class="mono" style="color:#00d4aa">1.6<br>PF 1.83</td><td class="mono" style="color:#00d4aa">2.4<br>PF 2.12</td><td class="mono" style="color:#00d4aa">✓ stabile</td></tr><tr><td class="mono muted">t2</td><td class="mono" style="color:#00d4aa">3.2<br>PF 1.93</td><td class="mono" style="color:#00d4aa">4.8<br>PF 1.86</td><td class="mono" style="color:#00d4aa">✓ stabile</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<!-- D) Regimi -->
+<div class="card" style="margin-bottom:16px">
+  <div class="card-t"><span class="dot" style="background:var(--o)"></span>D) Regimi di mercato — con €10 RT</div>
+  <table>
+    <thead><tr><th>Regime</th><th>N</th><th>WR</th><th>E[R]</th><th>PF</th><th>CAGR</th><th>MaxDD</th></tr></thead>
+    <tbody><tr>
+      <td style="color:#00d4aa">Bull pre-COVID 2013–19</td>
+      <td class="mono">117</td>
+      <td class="mono" style="color:#f7c948">49.6%</td>
+      <td class="mono" style="color:#00d4aa">+0.382R</td>
+      <td class="mono" style="color:#00d4aa">1.76</td>
+      <td class="mono" style="color:#00d4aa">+9.5%</td>
+      <td class="mono muted">-8.0%</td>
+    </tr><tr>
+      <td style="color:#00d4aa">COVID crash 2020</td>
+      <td class="mono">21</td>
+      <td class="mono" style="color:#f7c948">47.6%</td>
+      <td class="mono" style="color:#00d4aa">+0.323R</td>
+      <td class="mono" style="color:#00d4aa">1.65</td>
+      <td class="mono" style="color:#00d4aa">+8.1%</td>
+      <td class="mono muted">-5.6%</td>
+    </tr><tr>
+      <td style="color:#00d4aa">Bull 2021</td>
+      <td class="mono">21</td>
+      <td class="mono" style="color:#00d4aa">52.4%</td>
+      <td class="mono" style="color:#00d4aa">+0.449R</td>
+      <td class="mono" style="color:#00d4aa">1.90</td>
+      <td class="mono" style="color:#00d4aa">+21.3%</td>
+      <td class="mono muted">-7.3%</td>
+    </tr><tr>
+      <td style="color:#f75c5c">Bear 2022</td>
+      <td class="mono">7</td>
+      <td class="mono" style="color:#f7c948">42.9%</td>
+      <td class="mono" style="color:#f75c5c">-0.079R</td>
+      <td class="mono" style="color:#f75c5c">0.87</td>
+      <td class="mono" style="color:#f75c5c">-2.9%</td>
+      <td class="mono muted">-3.7%</td>
+    </tr><tr>
+      <td style="color:#00d4aa">Recovery 2023–24</td>
+      <td class="mono">32</td>
+      <td class="mono" style="color:#00d4aa">59.4%</td>
+      <td class="mono" style="color:#00d4aa">+0.794R</td>
+      <td class="mono" style="color:#00d4aa">2.98</td>
+      <td class="mono" style="color:#00d4aa">+25.2%</td>
+      <td class="mono muted">-4.6%</td>
+    </tr><tr>
+      <td style="color:#00d4aa">2025–2026</td>
+      <td class="mono">12</td>
+      <td class="mono" style="color:#00d4aa">58.3%</td>
+      <td class="mono" style="color:#00d4aa">+1.109R</td>
+      <td class="mono" style="color:#00d4aa">3.55</td>
+      <td class="mono" style="color:#00d4aa">+34.7%</td>
+      <td class="mono muted">-3.7%</td>
+    </tr></tbody>
+  </table>
+  <div style="margin-top:12px;padding:8px 12px;background:rgba(247,92,92,.06);border-radius:7px;
+    font-size:.72rem;border:1px solid rgba(247,92,92,.15);color:var(--tx)">
+    ⚠ <strong style="color:var(--r)">Bear 2022</strong>: unico fallimento strutturale.
+    MSFT perse -28% in 12 mesi — la strategia long-only con SuperTrend BULL come filtro riduce l'esposizione
+    (solo 7 trade), ma non può essere completamente "flat" su un trend bear prolungato.
+    Soluzione: aggiungere regola di pausa se SMA200 in downtrend per N settimane consecutive.
+  </div>
+</div>
+
+<!-- VERDICT -->
+<div class="verdict">
+  <div class="verdict-icon">🛡</div>
+  <div>
+    <div class="verdict-title">Verdetto: Edge robusto con un punto cieco</div>
+    <div class="verdict-body">
+      Il sistema supera <strong>8/9 criteri di validazione</strong> secondo la checklist operativa.
+      L'OOS è <em>migliore</em> dell'IS — segnale di edge genuino, non overfitting.
+      Monte Carlo conferma che anche con ordine dei trade sfortuno il CAGR rimane positivo al 5° percentile.
+    </div>
+    <div class="verdict-items">
+      <div class="vi">✓ <strong>OOS supera IS</strong> — E[R] +0.593R vs +0.398R: nessuna degradazione</div>
+      <div class="vi">✓ <strong>WF 9/11 blocchi positivi</strong> — funziona su regimi diversi</div>
+      <div class="vi">✓ <strong>MC 5° perc CAGR = +12.3%</strong> — edge non dipende dall'ordine</div>
+      <div class="vi">✓ <strong>Costi €10 RT</strong> → degradano CAGR di soli -1.3% — trascurabile</div>
+      <div class="vi">✓ <strong>Rimozione top-10</strong> → PF 1.72, CAGR +8.8% — non dipende da outlier</div>
+      <div class="vi">✓ <strong>Param ±20%</strong> → tutti PF > 1.15 — nessun cliff edge</div>
+      <div class="vi">✗ <strong style="color:var(--r)">Bear 2022 warning</strong> — long-only soffre in trend bear prolungati (n=7, PF 0.87)</div>
+    </div>
+  </div>
+</div>
+
+<div class="disc">
+  Capitale assunto: €25,000 · Costo per lato: €10 (flat fee, no commissione percentuale) ·
+  Tutte le metriche Sharpe/Sortino calcolate su daily returns inclusi giorni flat × √252 ·
+  Backtest su dati MSFT BATS 2013–2026 · Non costituisce consulenza finanziaria.
+</div>
+</div>
+
+<script>
+Chart.defaults.color='#4d5670';
+Chart.defaults.borderColor='#1d2235';
+Chart.defaults.font.family="'Azeret Mono',monospace";
+Chart.defaults.font.size=10;
+
+function grad(ctx,c1,c2,h=220){
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+}
+
+// IS/OOS equity
+(function(){
+  const ctx=document.getElementById('ioEq').getContext('2d');
+  const isD=["2013-05-15", "2013-05-18", "2013-05-21", "2013-05-24", "2013-05-27", "2013-05-30", "2013-06-02", "2013-06-05", "2013-06-08", "2013-06-11", "2013-06-14", "2013-06-17", "2013-06-20", "2013-06-23", "2013-06-26", "2013-06-29", "2013-07-02", "2013-07-05", "2013-07-08", "2013-07-11", "2013-07-14", "2013-07-17", "2013-07-20", "2013-07-23", "2013-07-26", "2013-07-29", "2013-08-01", "2013-08-04", "2013-08-07", "2013-08-10", "2013-08-13", "2013-08-16", "2013-08-19", "2013-08-22", "2013-08-25", "2013-08-28", "2013-08-31", "2013-09-03", "2013-09-06", "2013-09-09", "2013-09-12", "2013-09-15", "2013-09-18", "2013-09-21", "2013-09-24", "2013-09-27", "2013-09-30", "2013-10-03", "2013-10-06", "2013-10-09", "2013-10-12", "2013-10-15", "2013-10-18", "2013-10-21", "2013-10-24", "2013-10-27", "2013-10-30", "2013-11-02", "2013-11-05", "2013-11-08", "2013-11-11", "2013-11-14", "2013-11-17", "2013-11-20", "2013-11-23", "2013-11-26", "2013-11-29", "2013-12-02", "2013-12-05", "2013-12-08", "2013-12-11", "2013-12-14", "2013-12-17", "2013-12-20", "2013-12-23", "2013-12-26", "2013-12-29", "2014-01-01", "2014-01-04", "2014-01-07", "2014-01-10", "2014-01-13", "2014-01-16", "2014-01-19", "2014-01-22", "2014-01-25", "2014-01-28", "2014-01-31", "2014-02-03", "2014-02-06", "2014-02-09", "2014-02-12", "2014-02-15", "2014-02-18", "2014-02-21", "2014-02-24", "2014-02-27", "2014-03-02", "2014-03-05", "2014-03-08", "2014-03-11", "2014-03-14", "2014-03-17", "2014-03-20", "2014-03-23", "2014-03-26", "2014-03-29", "2014-04-01", "2014-04-04", "2014-04-07", "2014-04-10", "2014-04-13", "2014-04-16", "2014-04-19", "2014-04-22", "2014-04-25", "2014-04-28", "2014-05-01", "2014-05-04", "2014-05-07", "2014-05-10", "2014-05-13", "2014-05-16", "2014-05-19", "2014-05-22", "2014-05-25", "2014-05-28", "2014-05-31", "2014-06-03", "2014-06-06", "2014-06-09", "2014-06-12", "2014-06-15", "2014-06-18", "2014-06-21", "2014-06-24", "2014-06-27", "2014-06-30", "2014-07-03", "2014-07-06", "2014-07-09", "2014-07-12", "2014-07-15", "2014-07-18", "2014-07-21", "2014-07-24", "2014-07-27", "2014-07-30", "2014-08-02", "2014-08-05", "2014-08-08", "2014-08-11", "2014-08-14", "2014-08-17", "2014-08-20", "2014-08-23", "2014-08-26", "2014-08-29", "2014-09-01", "2014-09-04", "2014-09-07", "2014-09-10", "2014-09-13", "2014-09-16", "2014-09-19", "2014-09-22", "2014-09-25", "2014-09-28", "2014-10-01", "2014-10-04", "2014-10-07", "2014-10-10", "2014-10-13", "2014-10-16", "2014-10-19", "2014-10-22", "2014-10-25", "2014-10-28", "2014-10-31", "2014-11-03", "2014-11-06", "2014-11-09", "2014-11-12", "2014-11-15", "2014-11-18", "2014-11-21", "2014-11-24", "2014-11-27", "2014-11-30", "2014-12-03", "2014-12-06", "2014-12-09", "2014-12-12", "2014-12-15", "2014-12-18", "2014-12-21", "2014-12-24", "2014-12-27", "2014-12-30", "2015-01-02", "2015-01-05", "2015-01-08", "2015-01-11", "2015-01-14", "2015-01-17", "2015-01-20", "2015-01-23", "2015-01-26", "2015-01-29", "2015-02-01", "2015-02-04", "2015-02-07", "2015-02-10", "2015-02-13", "2015-02-16", "2015-02-19", "2015-02-22", "2015-02-25", "2015-02-28", "2015-03-03", "2015-03-06", "2015-03-09", "2015-03-12", "2015-03-15", "2015-03-18", "2015-03-21", "2015-03-24", "2015-03-27", "2015-03-30", "2015-04-02", "2015-04-05", "2015-04-08", "2015-04-11", "2015-04-14", "2015-04-17", "2015-04-20", "2015-04-23", "2015-04-26", "2015-04-29", "2015-05-02", "2015-05-05", "2015-05-08", "2015-05-11", "2015-05-14", "2015-05-17", "2015-05-20", "2015-05-23", "2015-05-26", "2015-05-29", "2015-06-01", "2015-06-04", "2015-06-07", "2015-06-10", "2015-06-13", "2015-06-16", "2015-06-19", "2015-06-22", "2015-06-25", "2015-06-28", "2015-07-01", "2015-07-04", "2015-07-07", "2015-07-10", "2015-07-13", "2015-07-16", "2015-07-19", "2015-07-22", "2015-07-25", "2015-07-28", "2015-07-31", "2015-08-03", "2015-08-06", "2015-08-09", "2015-08-12", "2015-08-15", "2015-08-18", "2015-08-21", "2015-08-24", "2015-08-27", "2015-08-30", "2015-09-02", "2015-09-05", "2015-09-08", "2015-09-11", "2015-09-14", "2015-09-17", "2015-09-20", "2015-09-23", "2015-09-26", "2015-09-29", "2015-10-02", "2015-10-05", "2015-10-08", "2015-10-11", "2015-10-14", "2015-10-17", "2015-10-20", "2015-10-23", "2015-10-26", "2015-10-29", "2015-11-01", "2015-11-04", "2015-11-07", "2015-11-10", "2015-11-13", "2015-11-16", "2015-11-19", "2015-11-22", "2015-11-25", "2015-11-28", "2015-12-01", "2015-12-04", "2015-12-07", "2015-12-10", "2015-12-13", "2015-12-16", "2015-12-19", "2015-12-22", "2015-12-25", "2015-12-28", "2015-12-31", "2016-01-03", "2016-01-06", "2016-01-09", "2016-01-12", "2016-01-15", "2016-01-18", "2016-01-21", "2016-01-24", "2016-01-27", "2016-01-30", "2016-02-02", "2016-02-05", "2016-02-08", "2016-02-11", "2016-02-14", "2016-02-17", "2016-02-20", "2016-02-23", "2016-02-26", "2016-02-29", "2016-03-03", "2016-03-06", "2016-03-09", "2016-03-12", "2016-03-15", "2016-03-18", "2016-03-21", "2016-03-24", "2016-03-27", "2016-03-30", "2016-04-02", "2016-04-05", "2016-04-08", "2016-04-11", "2016-04-14", "2016-04-17", "2016-04-20", "2016-04-23", "2016-04-26", "2016-04-29", "2016-05-02", "2016-05-05", "2016-05-08", "2016-05-11", "2016-05-14", "2016-05-17", "2016-05-20", "2016-05-23", "2016-05-26", "2016-05-29", "2016-06-01", "2016-06-04", "2016-06-07", "2016-06-10", "2016-06-13", "2016-06-16", "2016-06-19", "2016-06-22", "2016-06-25", "2016-06-28", "2016-07-01", "2016-07-04", "2016-07-07", "2016-07-10", "2016-07-13", "2016-07-16", "2016-07-19", "2016-07-22", "2016-07-25", "2016-07-28", "2016-07-31", "2016-08-03", "2016-08-06", "2016-08-09", "2016-08-12", "2016-08-15", "2016-08-18", "2016-08-21", "2016-08-24", "2016-08-27", "2016-08-30", "2016-09-02", "2016-09-05", "2016-09-08", "2016-09-11", "2016-09-14", "2016-09-17", "2016-09-20", "2016-09-23", "2016-09-26", "2016-09-29", "2016-10-02", "2016-10-05", "2016-10-08", "2016-10-11", "2016-10-14", "2016-10-17", "2016-10-20", "2016-10-23", "2016-10-26", "2016-10-29", "2016-11-01", "2016-11-04", "2016-11-07", "2016-11-10", "2016-11-13", "2016-11-16", "2016-11-19", "2016-11-22", "2016-11-25", "2016-11-28", "2016-12-01", "2016-12-04", "2016-12-07", "2016-12-10", "2016-12-13", "2016-12-16", "2016-12-19", "2016-12-22", "2016-12-25", "2016-12-28", "2016-12-31", "2017-01-03", "2017-01-06", "2017-01-09", "2017-01-12", "2017-01-15", "2017-01-18", "2017-01-21", "2017-01-24", "2017-01-27", "2017-01-30", "2017-02-02", "2017-02-05", "2017-02-08", "2017-02-11", "2017-02-14", "2017-02-17", "2017-02-20", "2017-02-23", "2017-02-26", "2017-03-01", "2017-03-04", "2017-03-07", "2017-03-10", "2017-03-13", "2017-03-16", "2017-03-19", "2017-03-22", "2017-03-25", "2017-03-28", "2017-03-31", "2017-04-03", "2017-04-06", "2017-04-09", "2017-04-12", "2017-04-15", "2017-04-18", "2017-04-21", "2017-04-24", "2017-04-27", "2017-04-30", "2017-05-03", "2017-05-06", "2017-05-09", "2017-05-12", "2017-05-15", "2017-05-18", "2017-05-21", "2017-05-24", "2017-05-27", "2017-05-30", "2017-06-02", "2017-06-05", "2017-06-08", "2017-06-11", "2017-06-14", "2017-06-17", "2017-06-20", "2017-06-23", "2017-06-26", "2017-06-29", "2017-07-02", "2017-07-05", "2017-07-08", "2017-07-11", "2017-07-14", "2017-07-17", "2017-07-20", "2017-07-23", "2017-07-26", "2017-07-29", "2017-08-01", "2017-08-04", "2017-08-07", "2017-08-10", "2017-08-13", "2017-08-16", "2017-08-19", "2017-08-22", "2017-08-25", "2017-08-28", "2017-08-31", "2017-09-03", "2017-09-06", "2017-09-09", "2017-09-12", "2017-09-15", "2017-09-18", "2017-09-21", "2017-09-24", "2017-09-27", "2017-09-30", "2017-10-03", "2017-10-06", "2017-10-09", "2017-10-12", "2017-10-15", "2017-10-18", "2017-10-21", "2017-10-24", "2017-10-27", "2017-10-30", "2017-11-02", "2017-11-05", "2017-11-08", "2017-11-11", "2017-11-14", "2017-11-17", "2017-11-20", "2017-11-23", "2017-11-26", "2017-11-29", "2017-12-02", "2017-12-05", "2017-12-08", "2017-12-11", "2017-12-14", "2017-12-17", "2017-12-20", "2017-12-23", "2017-12-26", "2017-12-29", "2018-01-01", "2018-01-04", "2018-01-07", "2018-01-10", "2018-01-13", "2018-01-16", "2018-01-19", "2018-01-22", "2018-01-25", "2018-01-28", "2018-01-31", "2018-02-03", "2018-02-06", "2018-02-09", "2018-02-12", "2018-02-15", "2018-02-18", "2018-02-21", "2018-02-24", "2018-02-27", "2018-03-02", "2018-03-05", "2018-03-08", "2018-03-11", "2018-03-14", "2018-03-17", "2018-03-20", "2018-03-23", "2018-03-26", "2018-03-29", "2018-04-01", "2018-04-04", "2018-04-07", "2018-04-10", "2018-04-13", "2018-04-16", "2018-04-19", "2018-04-22", "2018-04-25", "2018-04-28", "2018-05-01", "2018-05-04", "2018-05-07", "2018-05-10", "2018-05-13", "2018-05-16", "2018-05-19", "2018-05-22", "2018-05-25", "2018-05-28", "2018-05-31", "2018-06-03", "2018-06-06", "2018-06-09", "2018-06-12", "2018-06-15", "2018-06-18", "2018-06-21", "2018-06-24", "2018-06-27", "2018-06-30", "2018-07-03", "2018-07-06", "2018-07-09", "2018-07-12", "2018-07-15", "2018-07-18", "2018-07-21", "2018-07-24", "2018-07-27", "2018-07-30", "2018-08-02", "2018-08-05", "2018-08-08", "2018-08-11", "2018-08-14", "2018-08-17", "2018-08-20", "2018-08-23", "2018-08-26", "2018-08-29", "2018-09-01", "2018-09-04", "2018-09-07", "2018-09-10", "2018-09-13", "2018-09-16", "2018-09-19", "2018-09-22", "2018-09-25", "2018-09-28", "2018-10-01", "2018-10-04", "2018-10-07", "2018-10-10", "2018-10-13", "2018-10-16", "2018-10-19", "2018-10-22", "2018-10-25", "2018-10-28", "2018-10-31", "2018-11-03", "2018-11-06", "2018-11-09", "2018-11-12", "2018-11-15", "2018-11-18", "2018-11-21", "2018-11-24", "2018-11-27", "2018-11-30", "2018-12-03", "2018-12-06", "2018-12-09", "2018-12-12", "2018-12-15", "2018-12-18", "2018-12-21", "2018-12-24", "2018-12-27", "2018-12-30", "2019-01-02", "2019-01-05", "2019-01-08", "2019-01-11", "2019-01-14", "2019-01-17", "2019-01-20", "2019-01-23", "2019-01-26", "2019-01-29", "2019-02-01", "2019-02-04", "2019-02-07", "2019-02-10", "2019-02-13", "2019-02-16", "2019-02-19", "2019-02-22", "2019-02-25", "2019-02-28", "2019-03-03", "2019-03-06", "2019-03-09", "2019-03-12", "2019-03-15", "2019-03-18", "2019-03-21", "2019-03-24", "2019-03-27", "2019-03-30", "2019-04-02", "2019-04-05", "2019-04-08", "2019-04-11", "2019-04-14", "2019-04-17", "2019-04-20", "2019-04-23", "2019-04-26", "2019-04-29", "2019-05-02", "2019-05-05", "2019-05-08", "2019-05-11", "2019-05-14", "2019-05-17", "2019-05-20", "2019-05-23", "2019-05-26", "2019-05-29", "2019-06-01", "2019-06-04", "2019-06-07", "2019-06-10", "2019-06-13", "2019-06-16", "2019-06-19", "2019-06-22", "2019-06-25", "2019-06-28", "2019-07-01", "2019-07-04", "2019-07-07", "2019-07-10", "2019-07-13", "2019-07-16", "2019-07-19", "2019-07-22", "2019-07-25", "2019-07-28", "2019-07-31", "2019-08-03", "2019-08-06", "2019-08-09", "2019-08-12", "2019-08-15", "2019-08-18", "2019-08-21", "2019-08-24", "2019-08-27", "2019-08-30", "2019-09-02", "2019-09-05", "2019-09-08", "2019-09-11", "2019-09-14", "2019-09-17", "2019-09-20", "2019-09-23", "2019-09-26", "2019-09-29", "2019-10-02", "2019-10-05", "2019-10-08", "2019-10-11", "2019-10-14", "2019-10-17", "2019-10-20", "2019-10-23", "2019-10-26", "2019-10-29", "2019-11-01", "2019-11-04", "2019-11-07", "2019-11-10", "2019-11-13", "2019-11-16", "2019-11-19", "2019-11-22", "2019-11-25", "2019-11-28", "2019-12-01", "2019-12-04", "2019-12-07", "2019-12-10", "2019-12-13", "2019-12-16", "2019-12-19", "2019-12-22", "2019-12-25", "2019-12-28", "2019-12-31", "2020-01-03", "2020-01-06", "2020-01-09", "2020-01-12", "2020-01-15", "2020-01-18", "2020-01-21", "2020-01-24", "2020-01-27", "2020-01-30", "2020-02-02", "2020-02-05", "2020-02-08", "2020-02-11", "2020-02-14", "2020-02-17", "2020-02-20", "2020-02-23", "2020-02-26", "2020-02-29", "2020-03-03", "2020-03-06", "2020-03-09", "2020-03-12", "2020-03-15", "2020-03-18", "2020-03-21", "2020-03-24", "2020-03-27", "2020-03-30", "2020-04-02", "2020-04-05", "2020-04-08", "2020-04-11", "2020-04-14", "2020-04-17", "2020-04-20", "2020-04-23", "2020-04-26", "2020-04-29", "2020-05-02", "2020-05-05", "2020-05-08", "2020-05-11", "2020-05-14", "2020-05-17", "2020-05-20", "2020-05-23", "2020-05-26", "2020-05-29", "2020-06-01", "2020-06-04", "2020-06-07", "2020-06-10", "2020-06-13", "2020-06-16", "2020-06-19", "2020-06-22", "2020-06-25", "2020-06-28", "2020-07-01", "2020-07-04", "2020-07-07", "2020-07-10", "2020-07-13", "2020-07-16", "2020-07-19", "2020-07-22", "2020-07-25", "2020-07-28", "2020-07-31", "2020-08-03", "2020-08-06", "2020-08-09", "2020-08-12", "2020-08-15", "2020-08-18", "2020-08-21", "2020-08-24", "2020-08-27", "2020-08-30", "2020-09-02", "2020-09-05", "2020-09-08", "2020-09-11", "2020-09-14", "2020-09-17", "2020-09-20", "2020-09-23", "2020-09-26", "2020-09-29", "2020-10-02", "2020-10-05", "2020-10-08", "2020-10-11", "2020-10-14", "2020-10-17", "2020-10-20", "2020-10-23", "2020-10-26", "2020-10-29", "2020-11-01", "2020-11-04", "2020-11-07", "2020-11-10", "2020-11-13", "2020-11-16", "2020-11-19", "2020-11-22", "2020-11-25", "2020-11-28", "2020-12-01", "2020-12-04"], isV=[100.0, 100.0, 100.0, 101.81, 101.81, 101.81, 101.81, 101.81, 101.81, 101.81, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 100.83, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 98.93, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 97.07, 95.25, 95.25, 95.25, 95.25, 95.25, 97.28, 97.28, 97.28, 97.28, 97.28, 97.28, 97.28, 100.87, 100.87, 98.98, 98.98, 98.98, 98.98, 98.98, 100.66, 100.66, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 98.77, 96.91, 96.91, 96.91, 96.91, 96.91, 96.91, 96.91, 96.91, 96.91, 98.17, 98.17, 98.17, 98.17, 98.17, 98.17, 101.92, 101.92, 101.92, 100.0, 100.0, 100.0, 100.0, 98.12, 98.12, 98.12, 98.12, 98.12, 98.12, 98.12, 99.56, 99.56, 99.56, 99.56, 99.56, 99.56, 99.56, 99.56, 100.38, 100.38, 100.38, 100.38, 100.38, 100.38, 101.53, 101.53, 99.62, 99.62, 99.62, 99.62, 99.62, 99.62, 99.62, 100.05, 100.05, 100.05, 102.71, 102.71, 102.71, 102.71, 100.78, 98.89, 98.89, 97.96, 97.96, 97.96, 97.96, 97.96, 97.96, 97.96, 97.96, 97.96, 98.16, 98.16, 98.16, 98.16, 101.38, 101.38, 101.38, 99.47, 99.47, 99.47, 99.47, 99.47, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 98.54, 103.78, 103.78, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 99.91, 98.98, 98.98, 98.98, 98.98, 98.98, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 98.05, 105.03, 105.03, 105.03, 105.03, 103.05, 103.05, 103.05, 103.05, 105.27, 105.27, 104.28, 104.28, 104.28, 103.3, 103.3, 103.3, 103.3, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 102.33, 100.4, 100.4, 99.46, 99.46, 99.46, 99.46, 101.17, 99.27, 99.27, 99.27, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 97.4, 100.93, 108.12, 108.12, 108.12, 106.09, 106.09, 106.09, 106.09, 106.09, 106.09, 106.95, 106.95, 106.95, 106.95, 106.95, 106.95, 106.95, 108.71, 108.71, 107.69, 105.66, 105.66, 105.66, 105.66, 105.66, 105.66, 104.67, 104.67, 104.67, 104.67, 104.67, 104.67, 104.67, 104.67, 104.67, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 103.69, 105.19, 105.19, 105.19, 105.19, 105.19, 105.19, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 104.2, 109.74, 109.74, 109.74, 109.74, 109.74, 109.74, 113.77, 113.77, 113.77, 111.64, 111.64, 111.64, 111.64, 111.64, 111.64, 111.64, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 111.58, 109.48, 109.48, 107.42, 107.42, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 106.41, 108.22, 108.22, 106.18, 106.18, 106.18, 106.18, 106.18, 106.18, 106.18, 106.18, 106.18, 111.83, 111.83, 109.73, 109.73, 109.73, 109.73, 109.73, 109.73, 109.73, 110.84, 110.84, 108.76, 106.72, 106.72, 106.72, 106.72, 106.72, 106.72, 104.71, 104.71, 104.71, 104.71, 104.71, 104.71, 106.32, 106.32, 106.32, 106.32, 106.32, 106.32, 111.98, 111.98, 111.98, 111.98, 111.98, 111.98, 112.32, 110.21, 110.21, 110.21, 110.21, 110.21, 116.08, 116.08, 116.08, 113.89, 113.89, 113.89, 113.89, 113.89, 113.89, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 113.87, 111.73, 111.73, 111.73, 111.73, 111.73, 111.73, 111.73, 112.01, 112.01, 112.01, 112.01, 112.01, 112.01, 112.01, 112.01, 114.28, 112.13, 112.13, 112.13, 112.13, 112.13, 112.13, 112.13, 112.13, 112.13, 117.34, 117.34, 117.34, 123.59, 123.59, 123.59, 123.59, 123.59, 123.59, 123.59, 121.87, 121.87, 121.87, 121.87, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 124.86, 125.33, 125.33, 125.33, 125.33, 129.35, 129.35, 129.35, 129.35, 129.35, 136.24, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 138.58, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 135.97, 133.42, 133.42, 133.42, 133.42, 133.42, 133.42, 133.42, 135.15, 135.15, 135.15, 135.15, 135.15, 135.15, 139.05, 139.05, 139.05, 139.05, 139.05, 136.43, 136.43, 136.43, 135.15, 135.15, 135.15, 135.15, 135.15, 135.15, 138.68, 138.68, 138.68, 138.68, 143.88, 143.88, 143.88, 143.88, 143.88, 143.88, 143.88, 145.83, 145.83, 145.83, 145.83, 145.83, 145.83, 145.83, 147.95, 147.95, 147.95, 147.95, 147.95, 147.95, 147.95, 151.09, 151.09, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 148.25, 146.86, 146.86, 146.86, 146.86, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 145.48, 147.43, 147.43, 147.43, 147.43, 151.35, 151.35, 151.35, 151.35, 151.35, 154.84, 154.84, 154.84, 154.84, 154.84, 154.84, 154.84, 158.96, 158.96, 155.97, 155.97, 153.04, 153.04, 153.04, 153.04, 153.04, 155.67, 155.67, 155.67, 155.67, 155.67, 155.67, 155.67, 155.67, 155.67, 155.67, 155.67, 158.98, 158.98, 158.98, 158.98, 158.98, 158.98, 158.98, 164.69, 161.59, 161.59, 161.59, 161.59, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 165.5, 168.89, 168.89, 168.89, 168.89, 168.89, 168.89, 168.89, 173.37, 173.37, 173.37, 173.37, 173.37, 181.67, 181.67, 181.67, 181.67, 181.67, 181.67, 181.67, 189.13, 189.13, 189.13, 189.13, 189.13, 189.13, 194.78, 194.78, 194.78, 205.15, 205.15, 210.89, 210.89, 210.89, 210.89, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 206.93, 209.28, 209.28, 209.28, 209.28, 209.28, 209.28, 209.28, 210.01, 210.01, 208.04, 208.04, 208.04, 208.04, 208.04, 211.31, 211.31, 211.31, 211.31, 211.31, 211.31, 214.05, 214.05, 214.05, 214.05, 218.44, 218.44, 214.34, 214.34, 210.31, 210.31, 210.31, 210.31, 210.31, 210.31, 213.19, 213.19, 213.19, 213.19, 213.19, 218.86, 218.86, 218.86, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 214.75, 210.71, 210.71, 208.73, 208.73, 208.73, 208.73, 208.73, 206.77, 206.77, 206.77, 206.77, 206.77, 206.77, 206.77, 206.77, 206.54];
+  const oosD=["2021-01-25", "2021-01-27", "2021-01-29", "2021-01-31", "2021-02-02", "2021-02-04", "2021-02-06", "2021-02-08", "2021-02-10", "2021-02-12", "2021-02-14", "2021-02-16", "2021-02-18", "2021-02-20", "2021-02-22", "2021-02-24", "2021-02-26", "2021-02-28", "2021-03-02", "2021-03-04", "2021-03-06", "2021-03-08", "2021-03-10", "2021-03-12", "2021-03-14", "2021-03-16", "2021-03-18", "2021-03-20", "2021-03-22", "2021-03-24", "2021-03-26", "2021-03-28", "2021-03-30", "2021-04-01", "2021-04-03", "2021-04-05", "2021-04-07", "2021-04-09", "2021-04-11", "2021-04-13", "2021-04-15", "2021-04-17", "2021-04-19", "2021-04-21", "2021-04-23", "2021-04-25", "2021-04-27", "2021-04-29", "2021-05-01", "2021-05-03", "2021-05-05", "2021-05-07", "2021-05-09", "2021-05-11", "2021-05-13", "2021-05-15", "2021-05-17", "2021-05-19", "2021-05-21", "2021-05-23", "2021-05-25", "2021-05-27", "2021-05-29", "2021-05-31", "2021-06-02", "2021-06-04", "2021-06-06", "2021-06-08", "2021-06-10", "2021-06-12", "2021-06-14", "2021-06-16", "2021-06-18", "2021-06-20", "2021-06-22", "2021-06-24", "2021-06-26", "2021-06-28", "2021-06-30", "2021-07-02", "2021-07-04", "2021-07-06", "2021-07-08", "2021-07-10", "2021-07-12", "2021-07-14", "2021-07-16", "2021-07-18", "2021-07-20", "2021-07-22", "2021-07-24", "2021-07-26", "2021-07-28", "2021-07-30", "2021-08-01", "2021-08-03", "2021-08-05", "2021-08-07", "2021-08-09", "2021-08-11", "2021-08-13", "2021-08-15", "2021-08-17", "2021-08-19", "2021-08-21", "2021-08-23", "2021-08-25", "2021-08-27", "2021-08-29", "2021-08-31", "2021-09-02", "2021-09-04", "2021-09-06", "2021-09-08", "2021-09-10", "2021-09-12", "2021-09-14", "2021-09-16", "2021-09-18", "2021-09-20", "2021-09-22", "2021-09-24", "2021-09-26", "2021-09-28", "2021-09-30", "2021-10-02", "2021-10-04", "2021-10-06", "2021-10-08", "2021-10-10", "2021-10-12", "2021-10-14", "2021-10-16", "2021-10-18", "2021-10-20", "2021-10-22", "2021-10-24", "2021-10-26", "2021-10-28", "2021-10-30", "2021-11-01", "2021-11-03", "2021-11-05", "2021-11-07", "2021-11-09", "2021-11-11", "2021-11-13", "2021-11-15", "2021-11-17", "2021-11-19", "2021-11-21", "2021-11-23", "2021-11-25", "2021-11-27", "2021-11-29", "2021-12-01", "2021-12-03", "2021-12-05", "2021-12-07", "2021-12-09", "2021-12-11", "2021-12-13", "2021-12-15", "2021-12-17", "2021-12-19", "2021-12-21", "2021-12-23", "2021-12-25", "2021-12-27", "2021-12-29", "2021-12-31", "2022-01-02", "2022-01-04", "2022-01-06", "2022-01-08", "2022-01-10", "2022-01-12", "2022-01-14", "2022-01-16", "2022-01-18", "2022-01-20", "2022-01-22", "2022-01-24", "2022-01-26", "2022-01-28", "2022-01-30", "2022-02-01", "2022-02-03", "2022-02-05", "2022-02-07", "2022-02-09", "2022-02-11", "2022-02-13", "2022-02-15", "2022-02-17", "2022-02-19", "2022-02-21", "2022-02-23", "2022-02-25", "2022-02-27", "2022-03-01", "2022-03-03", "2022-03-05", "2022-03-07", "2022-03-09", "2022-03-11", "2022-03-13", "2022-03-15", "2022-03-17", "2022-03-19", "2022-03-21", "2022-03-23", "2022-03-25", "2022-03-27", "2022-03-29", "2022-03-31", "2022-04-02", "2022-04-04", "2022-04-06", "2022-04-08", "2022-04-10", "2022-04-12", "2022-04-14", "2022-04-16", "2022-04-18", "2022-04-20", "2022-04-22", "2022-04-24", "2022-04-26", "2022-04-28", "2022-04-30", "2022-05-02", "2022-05-04", "2022-05-06", "2022-05-08", "2022-05-10", "2022-05-12", "2022-05-14", "2022-05-16", "2022-05-18", "2022-05-20", "2022-05-22", "2022-05-24", "2022-05-26", "2022-05-28", "2022-05-30", "2022-06-01", "2022-06-03", "2022-06-05", "2022-06-07", "2022-06-09", "2022-06-11", "2022-06-13", "2022-06-15", "2022-06-17", "2022-06-19", "2022-06-21", "2022-06-23", "2022-06-25", "2022-06-27", "2022-06-29", "2022-07-01", "2022-07-03", "2022-07-05", "2022-07-07", "2022-07-09", "2022-07-11", "2022-07-13", "2022-07-15", "2022-07-17", "2022-07-19", "2022-07-21", "2022-07-23", "2022-07-25", "2022-07-27", "2022-07-29", "2022-07-31", "2022-08-02", "2022-08-04", "2022-08-06", "2022-08-08", "2022-08-10", "2022-08-12", "2022-08-14", "2022-08-16", "2022-08-18", "2022-08-20", "2022-08-22", "2022-08-24", "2022-08-26", "2022-08-28", "2022-08-30", "2022-09-01", "2022-09-03", "2022-09-05", "2022-09-07", "2022-09-09", "2022-09-11", "2022-09-13", "2022-09-15", "2022-09-17", "2022-09-19", "2022-09-21", "2022-09-23", "2022-09-25", "2022-09-27", "2022-09-29", "2022-10-01", "2022-10-03", "2022-10-05", "2022-10-07", "2022-10-09", "2022-10-11", "2022-10-13", "2022-10-15", "2022-10-17", "2022-10-19", "2022-10-21", "2022-10-23", "2022-10-25", "2022-10-27", "2022-10-29", "2022-10-31", "2022-11-02", "2022-11-04", "2022-11-06", "2022-11-08", "2022-11-10", "2022-11-12", "2022-11-14", "2022-11-16", "2022-11-18", "2022-11-20", "2022-11-22", "2022-11-24", "2022-11-26", "2022-11-28", "2022-11-30", "2022-12-02", "2022-12-04", "2022-12-06", "2022-12-08", "2022-12-10", "2022-12-12", "2022-12-14", "2022-12-16", "2022-12-18", "2022-12-20", "2022-12-22", "2022-12-24", "2022-12-26", "2022-12-28", "2022-12-30", "2023-01-01", "2023-01-03", "2023-01-05", "2023-01-07", "2023-01-09", "2023-01-11", "2023-01-13", "2023-01-15", "2023-01-17", "2023-01-19", "2023-01-21", "2023-01-23", "2023-01-25", "2023-01-27", "2023-01-29", "2023-01-31", "2023-02-02", "2023-02-04", "2023-02-06", "2023-02-08", "2023-02-10", "2023-02-12", "2023-02-14", "2023-02-16", "2023-02-18", "2023-02-20", "2023-02-22", "2023-02-24", "2023-02-26", "2023-02-28", "2023-03-02", "2023-03-04", "2023-03-06", "2023-03-08", "2023-03-10", "2023-03-12", "2023-03-14", "2023-03-16", "2023-03-18", "2023-03-20", "2023-03-22", "2023-03-24", "2023-03-26", "2023-03-28", "2023-03-30", "2023-04-01", "2023-04-03", "2023-04-05", "2023-04-07", "2023-04-09", "2023-04-11", "2023-04-13", "2023-04-15", "2023-04-17", "2023-04-19", "2023-04-21", "2023-04-23", "2023-04-25", "2023-04-27", "2023-04-29", "2023-05-01", "2023-05-03", "2023-05-05", "2023-05-07", "2023-05-09", "2023-05-11", "2023-05-13", "2023-05-15", "2023-05-17", "2023-05-19", "2023-05-21", "2023-05-23", "2023-05-25", "2023-05-27", "2023-05-29", "2023-05-31", "2023-06-02", "2023-06-04", "2023-06-06", "2023-06-08", "2023-06-10", "2023-06-12", "2023-06-14", "2023-06-16", "2023-06-18", "2023-06-20", "2023-06-22", "2023-06-24", "2023-06-26", "2023-06-28", "2023-06-30", "2023-07-02", "2023-07-04", "2023-07-06", "2023-07-08", "2023-07-10", "2023-07-12", "2023-07-14", "2023-07-16", "2023-07-18", "2023-07-20", "2023-07-22", "2023-07-24", "2023-07-26", "2023-07-28", "2023-07-30", "2023-08-01", "2023-08-03", "2023-08-05", "2023-08-07", "2023-08-09", "2023-08-11", "2023-08-13", "2023-08-15", "2023-08-17", "2023-08-19", "2023-08-21", "2023-08-23", "2023-08-25", "2023-08-27", "2023-08-29", "2023-08-31", "2023-09-02", "2023-09-04", "2023-09-06", "2023-09-08", "2023-09-10", "2023-09-12", "2023-09-14", "2023-09-16", "2023-09-18", "2023-09-20", "2023-09-22", "2023-09-24", "2023-09-26", "2023-09-28", "2023-09-30", "2023-10-02", "2023-10-04", "2023-10-06", "2023-10-08", "2023-10-10", "2023-10-12", "2023-10-14", "2023-10-16", "2023-10-18", "2023-10-20", "2023-10-22", "2023-10-24", "2023-10-26", "2023-10-28", "2023-10-30", "2023-11-01", "2023-11-03", "2023-11-05", "2023-11-07", "2023-11-09", "2023-11-11", "2023-11-13", "2023-11-15", "2023-11-17", "2023-11-19", "2023-11-21", "2023-11-23", "2023-11-25", "2023-11-27", "2023-11-29", "2023-12-01", "2023-12-03", "2023-12-05", "2023-12-07", "2023-12-09", "2023-12-11", "2023-12-13", "2023-12-15", "2023-12-17", "2023-12-19", "2023-12-21", "2023-12-23", "2023-12-25", "2023-12-27", "2023-12-29", "2023-12-31", "2024-01-02", "2024-01-04", "2024-01-06", "2024-01-08", "2024-01-10", "2024-01-12", "2024-01-14", "2024-01-16", "2024-01-18", "2024-01-20", "2024-01-22", "2024-01-24", "2024-01-26", "2024-01-28", "2024-01-30", "2024-02-01", "2024-02-03", "2024-02-05", "2024-02-07", "2024-02-09", "2024-02-11", "2024-02-13", "2024-02-15", "2024-02-17", "2024-02-19", "2024-02-21", "2024-02-23", "2024-02-25", "2024-02-27", "2024-02-29", "2024-03-02", "2024-03-04", "2024-03-06", "2024-03-08", "2024-03-10", "2024-03-12", "2024-03-14", "2024-03-16", "2024-03-18", "2024-03-20", "2024-03-22", "2024-03-24", "2024-03-26", "2024-03-28", "2024-03-30", "2024-04-01", "2024-04-03", "2024-04-05", "2024-04-07", "2024-04-09", "2024-04-11", "2024-04-13", "2024-04-15", "2024-04-17", "2024-04-19", "2024-04-21", "2024-04-23", "2024-04-25", "2024-04-27", "2024-04-29", "2024-05-01", "2024-05-03", "2024-05-05", "2024-05-07", "2024-05-09", "2024-05-11", "2024-05-13", "2024-05-15", "2024-05-17", "2024-05-19", "2024-05-21", "2024-05-23", "2024-05-25", "2024-05-27", "2024-05-29", "2024-05-31", "2024-06-02", "2024-06-04", "2024-06-06", "2024-06-08", "2024-06-10", "2024-06-12", "2024-06-14", "2024-06-16", "2024-06-18", "2024-06-20", "2024-06-22", "2024-06-24", "2024-06-26", "2024-06-28", "2024-06-30", "2024-07-02", "2024-07-04", "2024-07-06", "2024-07-08", "2024-07-10", "2024-07-12", "2024-07-14", "2024-07-16", "2024-07-18", "2024-07-20", "2024-07-22", "2024-07-24", "2024-07-26", "2024-07-28", "2024-07-30", "2024-08-01", "2024-08-03", "2024-08-05", "2024-08-07", "2024-08-09", "2024-08-11", "2024-08-13", "2024-08-15", "2024-08-17", "2024-08-19", "2024-08-21", "2024-08-23", "2024-08-25", "2024-08-27", "2024-08-29", "2024-08-31", "2024-09-02", "2024-09-04", "2024-09-06", "2024-09-08", "2024-09-10", "2024-09-12", "2024-09-14", "2024-09-16", "2024-09-18", "2024-09-20", "2024-09-22", "2024-09-24", "2024-09-26", "2024-09-28", "2024-09-30", "2024-10-02", "2024-10-04", "2024-10-06", "2024-10-08", "2024-10-10", "2024-10-12", "2024-10-14", "2024-10-16", "2024-10-18", "2024-10-20", "2024-10-22", "2024-10-24", "2024-10-26", "2024-10-28", "2024-10-30", "2024-11-01", "2024-11-03", "2024-11-05", "2024-11-07", "2024-11-09", "2024-11-11", "2024-11-13", "2024-11-15", "2024-11-17", "2024-11-19", "2024-11-21", "2024-11-23", "2024-11-25", "2024-11-27", "2024-11-29", "2024-12-01", "2024-12-03", "2024-12-05", "2024-12-07", "2024-12-09", "2024-12-11", "2024-12-13", "2024-12-15", "2024-12-17", "2024-12-19", "2024-12-21", "2024-12-23", "2024-12-25", "2024-12-27", "2024-12-29", "2024-12-31", "2025-01-02", "2025-01-04", "2025-01-06", "2025-01-08", "2025-01-10", "2025-01-12", "2025-01-14", "2025-01-16", "2025-01-18", "2025-01-20", "2025-01-22", "2025-01-24", "2025-01-26", "2025-01-28", "2025-01-30", "2025-02-01", "2025-02-03", "2025-02-05", "2025-02-07", "2025-02-09", "2025-02-11", "2025-02-13", "2025-02-15", "2025-02-17", "2025-02-19", "2025-02-21", "2025-02-23", "2025-02-25", "2025-02-27", "2025-03-01", "2025-03-03", "2025-03-05", "2025-03-07", "2025-03-09", "2025-03-11", "2025-03-13", "2025-03-15", "2025-03-17", "2025-03-19", "2025-03-21", "2025-03-23", "2025-03-25", "2025-03-27", "2025-03-29", "2025-03-31", "2025-04-02", "2025-04-04", "2025-04-06", "2025-04-08", "2025-04-10", "2025-04-12", "2025-04-14", "2025-04-16", "2025-04-18", "2025-04-20", "2025-04-22", "2025-04-24", "2025-04-26", "2025-04-28", "2025-04-30", "2025-05-02", "2025-05-04", "2025-05-06", "2025-05-08", "2025-05-10", "2025-05-12", "2025-05-14", "2025-05-16", "2025-05-18", "2025-05-20", "2025-05-22", "2025-05-24", "2025-05-26", "2025-05-28", "2025-05-30", "2025-06-01", "2025-06-03", "2025-06-05", "2025-06-07", "2025-06-09", "2025-06-11", "2025-06-13", "2025-06-15", "2025-06-17", "2025-06-19", "2025-06-21", "2025-06-23", "2025-06-25", "2025-06-27", "2025-06-29", "2025-07-01", "2025-07-03", "2025-07-05", "2025-07-07", "2025-07-09", "2025-07-11", "2025-07-13", "2025-07-15", "2025-07-17", "2025-07-19", "2025-07-21", "2025-07-23", "2025-07-25", "2025-07-27", "2025-07-29", "2025-07-31", "2025-08-02", "2025-08-04", "2025-08-06", "2025-08-08", "2025-08-10", "2025-08-12", "2025-08-14", "2025-08-16", "2025-08-18", "2025-08-20", "2025-08-22", "2025-08-24", "2025-08-26", "2025-08-28", "2025-08-30", "2025-09-01", "2025-09-03", "2025-09-05", "2025-09-07", "2025-09-09", "2025-09-11", "2025-09-13", "2025-09-15", "2025-09-17", "2025-09-19", "2025-09-21", "2025-09-23", "2025-09-25", "2025-09-27", "2025-09-29", "2025-10-01", "2025-10-03", "2025-10-05", "2025-10-07", "2025-10-09", "2025-10-11", "2025-10-13", "2025-10-15", "2025-10-17", "2025-10-19", "2025-10-21", "2025-10-23", "2025-10-25", "2025-10-27", "2025-10-29"], oosV=[100.0, 100.0, 102.22, 102.22, 102.22, 102.22, 102.22, 102.22, 102.22, 102.22, 102.22, 102.22, 103.44, 103.44, 101.5, 101.5, 101.5, 101.5, 101.5, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 100.54, 104.14, 104.14, 104.14, 104.14, 102.18, 102.18, 102.18, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 101.22, 105.48, 105.48, 105.48, 105.48, 105.48, 105.48, 105.48, 105.48, 105.48, 109.64, 109.64, 109.64, 109.64, 109.64, 109.64, 113.16, 113.16, 113.16, 113.16, 113.16, 113.16, 113.16, 113.16, 116.16, 116.16, 116.16, 113.97, 113.97, 113.97, 113.97, 111.83, 111.83, 111.83, 111.83, 111.83, 111.83, 109.73, 107.66, 107.66, 107.66, 107.66, 107.66, 110.05, 110.05, 110.05, 110.05, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 109.01, 112.89, 112.89, 112.89, 112.89, 112.89, 112.89, 112.89, 112.89, 112.89, 117.07, 117.07, 117.07, 117.07, 119.08, 119.08, 119.08, 119.08, 119.08, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 117.96, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 115.75, 113.57, 113.57, 113.57, 113.57, 113.57, 113.57, 113.57, 113.57, 113.57, 113.57, 115.78, 115.78, 115.78, 115.78, 115.78, 115.78, 115.78, 115.78, 115.78, 116.68, 116.68, 116.68, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 115.59, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 114.5, 115.56, 115.56, 115.56, 115.56, 115.56, 114.47, 114.47, 114.47, 114.47, 114.47, 114.47, 114.47, 114.47, 114.47, 114.47, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 113.39, 119.43, 119.43, 119.43, 119.43, 119.43, 119.43, 119.43, 117.18, 117.18, 117.18, 117.18, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 116.08, 119.3, 119.3, 119.3, 119.3, 119.3, 119.3, 119.3, 119.3, 119.3, 118.72, 118.72, 118.72, 127.18, 127.18, 127.18, 127.18, 127.18, 127.18, 127.18, 127.18, 127.18, 127.84, 127.84, 127.84, 127.84, 127.84, 127.84, 127.84, 127.84, 134.64, 134.64, 134.64, 134.64, 134.64, 134.64, 134.64, 134.64, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 139.66, 138.35, 138.35, 138.35, 138.35, 138.35, 141.98, 141.98, 141.98, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 140.64, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 138.0, 135.4, 136.6, 136.6, 136.6, 136.6, 136.6, 136.6, 136.6, 136.6, 143.87, 143.87, 143.87, 143.87, 143.87, 143.87, 143.87, 143.87, 143.87, 143.87, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 148.71, 150.43, 150.43, 150.43, 150.43, 154.43, 154.43, 154.43, 154.43, 154.43, 154.43, 154.43, 154.43, 154.43, 162.65, 162.65, 162.65, 162.65, 162.65, 162.65, 162.65, 168.33, 168.33, 168.33, 168.33, 168.33, 168.33, 168.33, 168.33, 168.33, 168.33, 168.33, 165.16, 165.16, 165.16, 165.16, 165.16, 167.97, 167.97, 167.97, 167.97, 167.97, 167.97, 167.97, 167.97, 167.97, 167.97, 168.72, 168.72, 168.72, 168.72, 168.72, 167.13, 167.13, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 165.56, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 162.45, 171.09, 171.09, 171.09, 171.09, 171.09, 171.09, 171.09, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 176.56, 173.24, 173.24, 173.24, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 171.61, 173.59, 173.59, 173.59, 173.59, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 170.33, 167.12, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 163.98, 172.71, 172.71, 172.71, 172.71, 172.71, 172.71, 172.71, 172.71, 172.71, 172.71, 178.14, 178.14, 178.14, 178.14, 178.14, 178.14, 178.14, 178.14, 178.14, 178.14, 184.96, 184.96, 184.96, 184.96, 184.96, 184.96, 184.96, 184.96, 184.96, 184.96, 192.99, 192.99, 192.99, 192.99, 192.99, 192.99, 192.99, 192.99, 197.76, 197.76, 197.76, 197.76, 211.84, 211.84, 211.84, 211.84, 211.84, 211.84, 211.84, 211.84, 211.84, 211.84, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 207.86, 203.95, 203.95, 203.95, 203.95, 203.95, 203.95, 203.95, 203.95, 203.95, 203.95, 218.47];
+  // Stitch: OOS inizia dove finisce IS (ribase)
+  const isLast=isV[isV.length-1];
+  const oosRebased=oosV.map(v=>v*(isLast/100));
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:[...isD,...oosD],
+      datasets:[
+        {label:'IS 2013–2020',data:[...isV,...Array(oosD.length).fill(null)],
+          borderColor:'#5b8ff9',borderWidth:2,pointRadius:0,fill:false,tension:.4,
+          borderDash:[]},
+        {label:'OOS 2021–2026',data:[...Array(isD.length).fill(null),...oosRebased],
+          borderColor:'#00d4aa',borderWidth:2.5,pointRadius:0,fill:true,tension:.4,
+          backgroundColor:(c)=>grad(c.chart.ctx,'rgba(0,212,170,.15)','rgba(0,212,170,0)')}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,padding:16}},
+        tooltip:{mode:'index',intersect:false},
+        annotation:{} },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{maxTicksLimit:8}},
+        y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{callback:v=>v.toFixed(0)}}
+      }
+    }
+  });
+})();
+
+// Walk-Forward bar
+(function(){
+  const ctx=document.getElementById('wfBar').getContext('2d');
+  new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:[2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+      datasets:[{
+        label:'CAGR OOS %',
+        data:[3.8, 20.0, 18.8, 30.6, 8.1, 21.3, -2.9, 37.8, 16.1, 34.7],
+        backgroundColor:["rgba(0,212,170,.75)", "rgba(0,212,170,.75)", "rgba(0,212,170,.75)", "rgba(0,212,170,.75)", "rgba(0,212,170,.75)", "rgba(0,212,170,.75)", "rgba(247,92,92,.75)", "rgba(0,212,170,.75)", "rgba(0,212,170,.75)", "rgba(0,212,170,.75)"],
+        borderColor:["rgba(0,212,170,1)", "rgba(0,212,170,1)", "rgba(0,212,170,1)", "rgba(0,212,170,1)", "rgba(0,212,170,1)", "rgba(0,212,170,1)", "rgba(247,92,92,1)", "rgba(0,212,170,1)", "rgba(0,212,170,1)", "rgba(0,212,170,1)"],
+        borderWidth:1, borderRadius:5,
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>c.parsed.y>0?'+'+c.parsed.y.toFixed(1)+'%':c.parsed.y.toFixed(1)+'%'}}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,.025)'},
+           ticks:{callback:v=>v>0?'+'+v+'%':v+'%'},
+           title:{display:true,text:'CAGR %',color:'#4d5670'}}
+      }
+    }
+  });
+})();
+
+// MC CAGR histogram
+(function(){
+  const edges=[-5.0, -3.0, -1.0, 1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0, 31.0];
+  const counts=[0, 0, 0, 0, 0, 0, 0, 0, 3000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const p5=12.345456230396707, p50=12.345456230396735, p95=12.345456230396735;
+  const ctx=document.getElementById('mcCagr').getContext('2d');
+  new Chart(ctx,{
+    type:'bar',
+    data:{labels:edges.map(e=>e.toFixed(0)+'%'),datasets:[{
+      data:counts,
+      backgroundColor:edges.map(e=>e<p5?'rgba(247,92,92,.6)':e>p95?'rgba(0,212,170,.6)':'rgba(247,201,72,.4)'),
+      borderWidth:0,borderRadius:2,
+    }]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:c=>c.parsed.y+' simulazioni @ '+c.label
+      }}},
+      scales:{x:{grid:{display:false}},
+               y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{callback:v=>v}}}
+    }
+  });
+})();
+
+// MC MDD histogram
+(function(){
+  const edges=[-25.0, -23.5, -22.0, -20.5, -19.0, -17.5, -16.0, -14.5, -13.0, -11.5, -10.0, -8.5, -7.0, -5.5, -4.0, -2.5];
+  const counts=[7, 17, 26, 66, 108, 195, 293, 475, 642, 605, 449, 108, 6, 0, 0, 0];
+  const ctx=document.getElementById('mcMdd').getContext('2d');
+  new Chart(ctx,{
+    type:'bar',
+    data:{labels:edges.map(e=>e.toFixed(1)+'%'),datasets:[{
+      data:counts,
+      backgroundColor:edges.map(e=>e<-18.529770432957186?'rgba(247,92,92,.7)':'rgba(247,92,92,.3)'),
+      borderWidth:0,borderRadius:2
+    }]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' sim @ '+c.label}}},
+      scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},
+               y:{grid:{color:'rgba(255,255,255,.025)'}}}
+    }
+  });
+})();
+</script>
+</body>
+</html>

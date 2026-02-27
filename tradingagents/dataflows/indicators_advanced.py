@@ -428,25 +428,48 @@ def compute_all(df: pd.DataFrame) -> pd.DataFrame:
     df = add_structure(df)                 # 3 cols
     df = add_crossovers(df)                # 2 cols
     df = add_derivatives(df)               # 1 col
+
+    # Aliases for compatibility with scoring/dashboard/tests
+    df["boll_middle"] = df["boll_mid"]
+    df["boll_pct"] = df["boll_pct_b"]
+    df["efr"] = df["efficiency_ratio"]
+    df["linreg"] = df["linear_reg"]
+    df["linreg_slope"] = df["linear_reg_slope"]
+    df["linreg_r2"] = df["linear_reg_r2"]
+    df["vol_ratio"] = df["volume_ratio"]
+    df["vol_sma"] = df["volume_sma20"]
+
+    # Uppercase aliases for legacy callers/tests
+    df["RSI"] = df["rsi"]
+    df["MACD"] = df["macd"]
+    df["ADX"] = df["adx"]
+    df["ATR"] = df["atr"]
+    df["SuperTrend"] = df["supertrend"]
     
     # Total: 44 indicatori + OHLCV originali = 49 + 2 derived = 51+
     return df
 
 
-    def get_indicator_names() -> list:
-       """Ritorna lista di tutti i nomi di indicatori creati."""
-       return [
-           "ema_10", "sma_50", "sma_200", "vwma_20", "pct_from_200sma",
-           "rsi", "tsi", "tsi_signal", "macd", "macd_signal", "macd_histogram",
-           "boll_middle", "boll_upper", "boll_lower", "boll_bandwidth", "boll_pct", "atr", "atr_pct",
-           "adx", "plus_di", "minus_di", "efr",
-           "supertrend", "linreg", "linreg_slope", "linreg_r2", "trend_dir",
-           "tenkan", "kijun", "senkou_a", "senkou_b", "chikou", "cloud_gap", "tk_cross",
-           "mfi", "vol_ratio", "vol_sma",
-           "donchian_h", "donchian_l", "donchian_mid",
-           "golden_cross", "death_cross",
-           "macd_histogram_slope"
-       ]
+def get_indicator_names() -> list:
+    """Ritorna lista di tutti i nomi di indicatori creati."""
+    return [
+        "ema_10", "sma_50", "sma_200", "vwma_20", "pct_from_200sma",
+        "rsi", "tsi", "tsi_signal", "macd", "macd_signal", "macd_histogram",
+        "boll_mid", "boll_upper", "boll_lower", "boll_bandwidth", "boll_pct_b",
+        "atr", "atr_pct",
+        "adx", "plus_di", "minus_di", "efficiency_ratio",
+        "supertrend_up", "supertrend_dn", "supertrend",
+        "linear_reg", "linear_reg_slope", "linear_reg_r2",
+        "ichimoku_tenkan", "ichimoku_kijun", "ichimoku_span_a", "ichimoku_span_b",
+        "ichimoku_chikou", "ichimoku_cloud_gap", "ichimoku_tk_cross",
+        "mfi", "volume_ratio", "volume_sma20",
+        "donchian_high", "donchian_low", "donchian_mid",
+        "golden_cross", "death_cross",
+        "macd_histogram_slope",
+        "boll_middle", "boll_pct", "efr", "linreg", "linreg_slope", "linreg_r2",
+        "vol_ratio", "vol_sma",
+        "RSI", "MACD", "ADX", "ATR", "SuperTrend",
+    ]
 
 
 if __name__ == "__main__":

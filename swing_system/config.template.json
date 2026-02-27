@@ -3,6 +3,12 @@
 
   "api_key": "INSERISCI_QUI_LA_TUA_API_KEY",
 
+  "engine": "optimized",
+  "params_dir": "params",
+  "risk_profile": "bilanciato",
+  "cost_per_roundtrip_eur": 0.0,
+  "capital_eur": 0.0,
+
   "watchlist": [
     "AAPL", "MSFT", "NVDA", "META", "GOOGL",
     "JPM",  "AMZN", "TSLA", "AMD",  "AVGO",

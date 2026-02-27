@@ -203,9 +203,11 @@ class BacktestResult:
         self.max_consecutive_losses = max_consecutive
     
     def to_dict(self) -> dict:
+        start = pd.Timestamp(self.start_date)
+        end = pd.Timestamp(self.end_date)
         return {
             "ticker": self.ticker,
-            "period": f"{self.start_date.date()} to {self.end_date.date()}",
+            "period": f"{start.date()} to {end.date()}",
             "metrics": {
                 "total_trades": self.total_trades,
                 "winning_trades": self.winning_trades,
@@ -365,6 +367,38 @@ class BacktesterV2:
                     # Score usando solo dati fino a i (no lookahead)
                     df_subset = df_range.iloc[:i+1]
                     score_data = scoring_fn(df_subset)
+
+                    if isinstance(score_data, list):
+                        candidates = [s for s in score_data if s is not None and getattr(s, "filters_passed", True)]
+                        if candidates:
+                            best = max(candidates, key=lambda s: s.score)
+                            score_data = {
+                                "score": best.score,
+                                "direction": best.direction,
+                                "stop_loss": best.stop_loss,
+                                "target1": best.target1,
+                                "target2": best.target2,
+                                "structure_event": best.structure_event,
+                                "volume_ratio": best.volume_ratio,
+                                "adx": best.adx,
+                                "atr_pct": best.atr_pct,
+                            }
+                        else:
+                            score_data = None
+                    elif hasattr(score_data, "score"):
+                        score_data = {
+                            "score": score_data.score,
+                            "direction": score_data.direction,
+                            "stop_loss": score_data.stop_loss,
+                            "target1": score_data.target1,
+                            "target2": score_data.target2,
+                            "structure_event": score_data.structure_event,
+                            "volume_ratio": score_data.volume_ratio,
+                            "adx": score_data.adx,
+                            "atr_pct": score_data.atr_pct,
+                        }
+                    elif score_data is not None and not isinstance(score_data, dict):
+                        score_data = None
                     
                     if score_data and score_data["score"] >= self.min_signal_score:
                         direction = score_data.get("direction", "LONG")

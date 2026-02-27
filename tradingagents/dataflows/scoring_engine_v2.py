@@ -84,6 +84,24 @@ DEFAULT_TRADE = {
 # SCORING COMPONENTS
 # ═════════════════════════════════════════════════════════════════════════════
 
+def _get_last(df: pd.DataFrame, names: List[str], default: float) -> float:
+    for name in names:
+        if name in df.columns:
+            return df[name].iloc[-1]
+    return default
+
+
+def _is_supertrend_bullish(df: pd.DataFrame, direction: str) -> bool:
+    value = _get_last(df, ["supertrend"], 0.0)
+    close = df["close"].iloc[-1]
+
+    # If supertrend is a direction signal (+1/-1), use sign.
+    if abs(value) <= 2:
+        return value > 0 if direction == "LONG" else value < 0
+
+    # Otherwise treat as a band value.
+    return close > value if direction == "LONG" else close < value
+
 def score_structure(df: pd.DataFrame, mtf_data: Dict = None, direction: str = "LONG") -> Tuple[float, Dict]:
     """Score 1/5: Structure (CHoCH/BOS), weight 30%."""
     if mtf_data is None:
@@ -119,7 +137,7 @@ def score_trend_strength(df: pd.DataFrame, direction: str = "LONG") -> Tuple[flo
     details = {}
     
     # ADX strength
-    adx = df["adx"].iloc[-1] if "adx" in df.columns else 0.0
+    adx = _get_last(df, ["adx", "ADX"], 0.0)
     if adx >= 35:
         score += 25
         details["adx_strong"] = True
@@ -128,20 +146,18 @@ def score_trend_strength(df: pd.DataFrame, direction: str = "LONG") -> Tuple[flo
         details["adx_moderate"] = True
     
     # Efficiency Ratio
-    efr = df["efr"].iloc[-1] if "efr" in df.columns else 0.0
+    efr = _get_last(df, ["efr", "efficiency_ratio"], 0.0)
     if efr >= 0.5:
         score += 15
         details["efr_good"] = True
     
     # SuperTrend
-    supertrend = df["supertrend"].iloc[-1] if "supertrend" in df.columns else 0.0
-    close = df["close"].iloc[-1]
-    if direction == "LONG" and close > supertrend:
+    if _is_supertrend_bullish(df, direction):
         score += 20
         details["supertrend_bullish"] = True
     
     # Linear Regression R²
-    linreg_r2 = df["linreg_r2"].iloc[-1] if "linreg_r2" in df.columns else 0.0
+    linreg_r2 = _get_last(df, ["linreg_r2", "linear_reg_r2"], 0.0)
     if linreg_r2 >= 0.7:
         score += 15
         details["trend_established"] = True
@@ -155,27 +171,30 @@ def score_momentum(df: pd.DataFrame, direction: str = "LONG") -> Tuple[float, Di
     details = {}
     
     # RSI
-    rsi = df["rsi"].iloc[-1] if "rsi" in df.columns else 50.0
+    rsi = _get_last(df, ["rsi", "RSI"], 50.0)
     if 40 <= rsi <= 60:  # Not overextended
         score += 15
         details["rsi_neutral"] = True
     
     # TSI
-    tsi = df["tsi"].iloc[-1] if "tsi" in df.columns else 0.0
-    tsi_signal = df["tsi_signal"].iloc[-1] if "tsi_signal" in df.columns else 0.0
+    tsi = _get_last(df, ["tsi"], 0.0)
+    tsi_signal = _get_last(df, ["tsi_signal"], 0.0)
     if direction == "LONG" and tsi > tsi_signal:
         score += 15
         details["tsi_bullish"] = True
     
     # MACD
-    macd_hist = df["macd_histogram"].iloc[-1] if "macd_histogram" in df.columns else 0.0
-    macd_slope = (df["macd_histogram"].iloc[-1] - df["macd_histogram"].iloc[-2]) if len(df) >= 2 else 0.0
+    macd_hist = _get_last(df, ["macd_histogram"], 0.0)
+    if "macd_histogram" in df.columns and len(df) >= 2:
+        macd_slope = df["macd_histogram"].iloc[-1] - df["macd_histogram"].iloc[-2]
+    else:
+        macd_slope = 0.0
     if direction == "LONG" and macd_hist > 0 and macd_slope > 0:
         score += 20
         details["macd_bullish"] = True
     
     # MFI/Volume
-    mfi = df["mfi"].iloc[-1] if "mfi" in df.columns else 50.0
+    mfi = _get_last(df, ["mfi"], 50.0)
     if direction == "LONG" and mfi > 50:
         score += 10
         details["mfi_bullish"] = True
@@ -189,20 +208,23 @@ def score_volatility(df: pd.DataFrame) -> Tuple[float, Dict]:
     details = {}
     
     # Bollinger %B
-    boll_pct = df["boll_pct"].iloc[-1] if "boll_pct" in df.columns else 0.5
+    boll_pct = _get_last(df, ["boll_pct", "boll_pct_b"], 0.5)
     if 0.2 <= boll_pct <= 0.8:  # Not at extremes
         score += 30
         details["bands_neutral"] = True
     
     # Bandwidth expanding
-    boll_bw = df["boll_bandwidth"].iloc[-1] if "boll_bandwidth" in df.columns else 0.0
-    boll_bw_prev = df["boll_bandwidth"].iloc[-2] if len(df) >= 2 and "boll_bandwidth" in df.columns else 0.0
+    boll_bw = _get_last(df, ["boll_bandwidth"], 0.0)
+    if "boll_bandwidth" in df.columns and len(df) >= 2:
+        boll_bw_prev = df["boll_bandwidth"].iloc[-2]
+    else:
+        boll_bw_prev = 0.0
     if boll_bw > boll_bw_prev:
         score += 20
         details["expansion"] = True
     
     # Price near midline
-    boll_mid = df["boll_middle"].iloc[-1] if "boll_middle" in df.columns else 0.0
+    boll_mid = _get_last(df, ["boll_middle", "boll_mid"], 0.0)
     close = df["close"].iloc[-1]
     if abs(close - boll_mid) / (boll_mid + 0.001) < 0.02:
         score += 15
@@ -217,20 +239,25 @@ def score_volume(df: pd.DataFrame, direction: str = "LONG") -> Tuple[float, Dict
     details = {}
     
     # Volume Ratio
-    vol_ratio = df["vol_ratio"].iloc[-1] if "vol_ratio" in df.columns else 1.0
+    vol_ratio = _get_last(df, ["vol_ratio", "volume_ratio"], 1.0)
     if vol_ratio >= 1.3:
         score += 25
         details["high_volume"] = True
     
     # MFI confirmation
-    mfi = df["mfi"].iloc[-1] if "mfi" in df.columns else 50.0
-    vol_ratio_trend = (vol_ratio > df["vol_ratio"].iloc[-2]) if len(df) >= 2 and "vol_ratio" in df.columns else False
+    mfi = _get_last(df, ["mfi"], 50.0)
+    if "vol_ratio" in df.columns and len(df) >= 2:
+        vol_ratio_trend = vol_ratio > df["vol_ratio"].iloc[-2]
+    elif "volume_ratio" in df.columns and len(df) >= 2:
+        vol_ratio_trend = vol_ratio > df["volume_ratio"].iloc[-2]
+    else:
+        vol_ratio_trend = False
     if mfi > 50 and vol_ratio_trend:
         score += 20
         details["vol_aligned"] = True
     
     # Volume SMA
-    vol_sma = df["vol_sma"].iloc[-1] if "vol_sma" in df.columns else 0.0
+    vol_sma = _get_last(df, ["vol_sma", "volume_sma20"], 0.0)
     vol = df["volume"].iloc[-1]
     if vol > vol_sma:
         score += 15
@@ -265,34 +292,32 @@ def check_filters(df: pd.DataFrame,
     
     # 2. Above 200 SMA
     if filters.get("above_200sma", True):
-        sma200 = df["sma_200"].iloc[-1] if "sma_200" in df.columns else 0.0
+        sma200 = _get_last(df, ["sma_200", "SMA200"], 0.0)
         close = df["close"].iloc[-1]
         if direction == "LONG" and close < sma200:
             failures.append("Price below SMA200")
     
     # 3. ADX minimum
     adx_min = filters.get("adx_min", 20.0)
-    adx = df["adx"].iloc[-1] if "adx" in df.columns else 0.0
+    adx = _get_last(df, ["adx", "ADX"], 0.0)
     if adx < adx_min:
         failures.append(f"ADX too low: {adx:.1f}<{adx_min}")
     
     # 4. SuperTrend alignment
     if filters.get("supertrend_align", True):
-        supertrend = df["supertrend"].iloc[-1] if "supertrend" in df.columns else 0.0
-        close = df["close"].iloc[-1]
-        if direction == "LONG" and close < supertrend:
-            failures.append("SuperTrend bearish")
+        if not _is_supertrend_bullish(df, direction):
+            failures.append("SuperTrend misaligned")
     
     # 5. ATR% range
     atr_pct_min = filters.get("atr_pct_min", 0.5)
     atr_pct_max = filters.get("atr_pct_max", 8.0)
-    atr_pct = df["atr_pct"].iloc[-1] if "atr_pct" in df.columns else 1.0
+    atr_pct = _get_last(df, ["atr_pct"], 1.0)
     if not (atr_pct_min <= atr_pct <= atr_pct_max):
         failures.append(f"ATR% out of range: {atr_pct:.2f}%")
     
     # 6. Not overextended
     if filters.get("not_overextended", True):
-        pct_from_200 = df["pct_from_200sma"].iloc[-1] if "pct_from_200sma" in df.columns else 0.0
+        pct_from_200 = _get_last(df, ["pct_from_200sma"], 0.0)
         if direction == "LONG" and pct_from_200 > 25:
             failures.append(f"Overextended: {pct_from_200:.1f}% above SMA200")
     
@@ -377,8 +402,8 @@ def score_signal(ticker: str,
         return None
     
     # Get ATR for levels
-    atr = df["atr"].iloc[-1] if "atr" in df.columns else 1.0
-    atr_pct = df["atr_pct"].iloc[-1] if "atr_pct" in df.columns else 1.0
+    atr = _get_last(df, ["atr", "ATR"], 1.0)
+    atr_pct = _get_last(df, ["atr_pct"], 1.0)
     entry, stop, target = calculate_levels(df, direction, atr, trade_params)
     risk_reward = abs(target - entry) / (abs(entry - stop) + 0.0001)
     
@@ -406,10 +431,10 @@ def score_signal(ticker: str,
         weekly_trend=mtf_data.get("weekly_trend", "UNDEFINED"),
         daily_trend=mtf_data.get("daily_trend", "UNDEFINED"),
         structure_event=mtf_data.get("structure_event", ""),
-        adx=df["adx"].iloc[-1] if "adx" in df.columns else 0.0,
-        rsi=df["rsi"].iloc[-1] if "rsi" in df.columns else 50.0,
-        volume_ratio=df["vol_ratio"].iloc[-1] if "vol_ratio" in df.columns else 1.0,
-        pct_from_200sma=df["pct_from_200sma"].iloc[-1] if "pct_from_200sma" in df.columns else 0.0,
+        adx=_get_last(df, ["adx", "ADX"], 0.0),
+        rsi=_get_last(df, ["rsi", "RSI"], 50.0),
+        volume_ratio=_get_last(df, ["vol_ratio", "volume_ratio"], 1.0),
+        pct_from_200sma=_get_last(df, ["pct_from_200sma"], 0.0),
     )
     
     return signal
