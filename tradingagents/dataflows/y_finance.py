@@ -126,6 +126,159 @@ def get_stock_stats_indicators_window(
             "Usage: Identify overbought (>80) or oversold (<20) conditions and confirm the strength of trends or reversals. "
             "Tips: Use alongside RSI or MACD to confirm signals; divergence between price and MFI can indicate potential reversals."
         ),
+        # ==================== SWING TRADING INDICATORS ====================
+        # Trend Strength
+        "adx": (
+            "ADX (Average Directional Index): Measures trend strength regardless of direction. "
+            "Usage: ADX > 25 = strong trend (good for swings), ADX < 20 = weak/sideways (avoid). "
+            "Tips: Essential for validating swing trade setups. Always check before entering position."
+        ),
+        "plus_di": (
+            "+DI (Plus Directional Indicator): Measures upward directional movement. "
+            "Usage: +DI > -DI suggests uptrend strength. Use with ADX to confirm bullish swing setups. "
+            "Tips: Rising +DI with ADX > 25 = strong uptrend."
+        ),
+        "minus_di": (
+            "-DI (Minus Directional Indicator): Measures downward directional movement. "
+            "Usage: -DI > +DI suggests downtrend strength. Use with ADX to confirm bearish swing setups. "
+            "Tips: Rising -DI with ADX > 25 = strong downtrend."
+        ),
+        "er": (
+            "ER (Efficiency Ratio): Measures trend efficiency vs noise. "
+            "Usage: ER near 1 = strong directional trend, ER near 0 = noisy/sideways market. "
+            "Tips: Filter swing trades: only trade when ER > 0.5 for high-quality setups."
+        ),
+        # Trend Direction
+        "supertrend": (
+            "SuperTrend: Dynamic support/resistance based on ATR. "
+            "Usage: Price above SuperTrend = uptrend, below = downtrend. Excellent for swing entries. "
+            "Tips: Combines volatility and price action. Low false signals in trending markets."
+        ),
+        "supertrend_direction": (
+            "SuperTrend Direction: Binary trend signal. "
+            "Usage: +1 = uptrend, -1 = downtrend. Clear directional signal for swing positioning. "
+            "Tips: Direction flip = potential trend reversal. Confirm with other indicators."
+        ),
+        "linear_regression": (
+            "Linear Regression Line: Fitted trend line over 20 periods. "
+            "Usage: Identifies mean reversion opportunities. Price far from line = potential reversion. "
+            "Tips: Use slope + R² together to assess trend quality."
+        ),
+        "linear_regression_slope": (
+            "Linear Regression Slope: Trend inclination measure. "
+            "Usage: Slope > 0 = uptrend, < 0 = downtrend. Magnitude shows trend strength. "
+            "Tips: Steep slope + high R² = strong consistent trend."
+        ),
+        "linear_regression_r2": (
+            "R-Squared: Measures linearity/consistency of trend. "
+            "Usage: R² near 1 = consistent linear trend, near 0 = choppy price action. "
+            "Tips: Only swing trade when R² > 0.6 for reliable trends."
+        ),
+        # Ichimoku Cloud Components
+        "ichimoku_tenkan_sen": (
+            "Ichimoku Conversion Line (Tenkan-sen): 9-period high+low midpoint. "
+            "Usage: Fast-moving reference for short-term momentum. "
+            "Tips: Price crossing Tenkan-sen signals short-term trend change."
+        ),
+        "ichimoku_kijun_sen": (
+            "Ichimoku Base Line (Kijun-sen): 26-period high+low midpoint. "
+            "Usage: Medium-term equilibrium price. Acts as dynamic support/resistance. "
+            "Tips: Strong signal when Tenkan crosses Kijun."
+        ),
+        "ichimoku_senkou_span_a": (
+            "Ichimoku Leading Span A (Cloud boundary): Average of Tenkan and Kijun, shifted forward. "
+            "Usage: Forms cloud top/bottom. Price above cloud = bullish, below = bearish. "
+            "Tips: Cloud acts as dynamic support/resistance zone."
+        ),
+        "ichimoku_senkou_span_b": (
+            "Ichimoku Leading Span B (Cloud boundary): 52-period high+low midpoint, shifted forward. "
+            "Usage: Forms cloud top/bottom. Thicker cloud = stronger support/resistance. "
+            "Tips: Cloud color change = major trend reversal signal."
+        ),
+        "ichimoku_chikou_span": (
+            "Ichimoku Lagging Span (Chikou): Current close shifted back 26 periods. "
+            "Usage: Confirms price momentum relative to past. Chikou above past price = bullish. "
+            "Tips: Chikou crossing price confirms trend strength."
+        ),
+        # TSI Momentum
+        "tsi": (
+            "TSI (True Strength Index): Double-smoothed momentum indicator with optimized swing params (13/7). "
+            "Usage: TSI > 0 indicates bullish momentum, TSI < 0 bearish. Crossover with signal line provides trade signals. "
+            "Tips: (13/7) params give 2-3 bar lead vs RSI, smoother without whipsaws. Essential for swing timing."
+        ),
+        "tsi_signal": (
+            "TSI Signal Line: Smoothed TSI for crossover analysis. "
+            "Usage: When TSI crosses above signal = buy signal, crosses below = sell signal. "
+            "Tips: Use with TSI for timing swing trade entries/exits."
+        ),
+        # Updated Linear Regression (dual periods)
+        "linear_regression_20": (
+            "Linear Regression Line (20 periods): Fitted trend over ~1 month. Mean reversion reference line. "
+            "Usage: Distance from LR line identifies overbought/oversold extremes. "
+            "Tips: Use r2_20 to qualify trend linearity (>0.6 = reliable, <0.4 = choppy)."
+        ),
+        "linear_regression_slope_20": (
+            "Linear Regression Slope (20): First derivative of 20-period trend line. "
+            "Usage: Slope > 0 = uptrend, < 0 = downtrend. Magnitude shows trend strength. "
+            "Tips: Steep slope + r2 > 0.6 = strong trend for swing entries."
+        ),
+        "linear_regression_20_r2": (
+            "R-Squared (20): Linearity metric of 20-period regression (0-1). "
+            "Usage: R² > 0.6 = consistent linear trend (swing-valid). R² < 0.4 = choppy. "
+            "Tips: Filter out choppy markets; only trade when R² > 0.55."
+        ),
+        "linear_regression_10": (
+            "Linear Regression Line (10 periods): Fitted trend over ~2 weeks. More reactive than 20-period. "
+            "Usage: Captures recent trend inflections faster. Use with 20-period for confluent signal. "
+            "Tips: When 10-period slope flips sign, potential reversal forming."
+        ),
+        "linear_regression_slope_10": (
+            "Linear Regression Slope (10): First derivative of 10-period trend line. "
+            "Usage: Faster trend direction changes than 20-period. Early reversal detection. "
+            "Tips: Divergence between slope_10 and slope_20 = inflection point (potential swing reversal)."
+        ),
+        "linear_regression_10_r2": (
+            "R-Squared (10): Linearity of recent 10-bar trend. "
+            "Usage: High r2_10 with negative slope_10 = pre-reversal compression (setup forming). "
+            "Tips: Monitor r2_10 < 0.3 = choppy oscillation (avoid), r2_10 > 0.7 = clean micro-trend."
+        ),
+        # NEW: Volume and Breakout Indicators
+        "bollinger_bandwidth": (
+            "Bollinger Bandwidth: (upper-lower)/middle*100. Volatility compression metric. "
+            "Usage: BW < 10 = extreme squeeze=breakout imminent. Rising BW = volatility increasing. "
+            "Tips: Rising from compression = setup inflection. Monitor change rate, not absolute value."
+        ),
+        "volume_ratio": (
+            "Volume Ratio: current_volume / SMA(volume,20). Breakout quality metric. "
+            "Usage: VR > 1.5 = STRONG BOS (high follow-through). VR < 0.7 = WEAK BOS (high failure). "
+            "Tips: CRITICAL for swing: BOS w/ VR>1.5 has 20-30% higher win rate. Filter breakouts by VR."
+        ),
+        "donchian_high": (
+            "Donchian Channel High (20): MAX(high,20). Structural resistance based on actual price. "
+            "Usage: Breakout above = true BOS vs false breakout. More reliable than Bollinger for swing. "
+            "Tips: Breakout above Donchian + rising ADX + VR>1.5 = high-confidence swing entry."
+        ),
+        "donchian_low": (
+            "Donchian Channel Low (20): MIN(low,20). Structural support based on actual price. "
+            "Usage: Breakdown below = structural support loss. Test of Donchian Low = swing short setup. "
+            "Tips: When price holds above Donchian Low after touch, reversal likely (mean reversion setup)."
+        ),
+        "donchian_mid": (
+            "Donchian Midline: (Donchian_High + Donchian_Low)/2. Dynamic center-pivot. "
+            "Usage: Acts as dynamic S/R, more responsive than 50 SMA for breakout context. "
+            "Tips: Price crossing Donchian Mid from below = momentum shift confirmation."
+        ),
+        # NEW: Screening Metrics
+        "percent_from_200sma": (
+            "Percent from 200 SMA: (close-200SMA)/200SMA*100. Mean-reversion distance metric. "
+            "Usage: >+20% = anti-reversion risk HIGH. <-20% = extreme accumulation potential. "
+            "Tips: CRITICAL filter for swing screening. Avoid setups >|25%| (statistically low win rate)."
+        ),
+        "atr_percent": (
+            "ATR Percent: (ATR/close)*100. Cross-asset comparable volatility (vs absolute ATR). "
+            "Usage: Allows uniform position sizing: 1.5x ATR% stop, 3x ATR% target across all assets. "
+            "Tips: ATR% >3% = volatile (reduce size). ATR% <1% = stable (increase size). Normalize your system."
+        ),
     }
 
     if indicator not in best_ind_params:
@@ -196,12 +349,26 @@ def _get_stock_stats_bulk(
     """
     from .config import get_config
     import pandas as pd
-    from stockstats import wrap
     import os
     
     config = get_config()
     online = config["data_vendors"]["technical_indicators"] != "local"
     
+    # New indicators that use technical_calculations.py
+    ADVANCED_INDICATORS = [
+        'adx', 'plus_di', 'minus_di', 'er',
+        'supertrend', 'supertrend_direction',
+        'linear_regression_20', 'linear_regression_slope_20', 'linear_regression_20_r2',
+        'linear_regression_10', 'linear_regression_slope_10', 'linear_regression_10_r2',
+        'ichimoku_tenkan_sen', 'ichimoku_kijun_sen', 'ichimoku_senkou_span_a',
+        'ichimoku_senkou_span_b', 'ichimoku_chikou_span',
+        'tsi', 'tsi_signal',
+        'bollinger_bandwidth', 'volume_ratio',
+        'donchian_high', 'donchian_low', 'donchian_mid',
+        'percent_from_200sma', 'atr_percent'
+    ]
+    
+    # Get OHLCV data
     if not online:
         # Local data path
         try:
@@ -211,9 +378,8 @@ def _get_stock_stats_bulk(
                     f"{symbol}-YFin-data-2015-01-01-2025-03-25.csv",
                 )
             )
-            df = wrap(data)
         except FileNotFoundError:
-            raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")
+            raise Exception("Yahoo Finance data not fetched yet!")
     else:
         # Online data fetching with caching
         today_date = pd.Timestamp.today()
@@ -245,26 +411,72 @@ def _get_stock_stats_bulk(
             )
             data = data.reset_index()
             data.to_csv(data_file, index=False)
+    
+    # Ensure consistent column names
+    data.columns = data.columns.str.lower()
+    if 'date' not in data.columns:
+        data = data.reset_index()
+        data.columns = data.columns.str.lower()
+    
+    # Use advanced calculation for new indicators
+    if indicator in ADVANCED_INDICATORS:
+        from .technical_calculations import get_all_indicators
+        
+        # Calculate all indicators at once
+        indicators_dict = get_all_indicators(data, swing_mode=True)
+        
+        # Extract the requested indicator
+        if indicator in indicators_dict:
+            indicator_series = indicators_dict[indicator]
+            
+            # Special handling for R² which is a scalar
+            if indicator == 'linear_regression_r2':
+                r2_value = indicators_dict[indicator]
+                result_dict = {}
+                for _, row in data.iterrows():
+                    date_str = pd.to_datetime(row['date']).strftime('%Y-%m-%d')
+                    result_dict[date_str] = f"{r2_value:.4f}"
+                return result_dict
+            
+            # Create result dictionary
+            result_dict = {}
+            for idx, row in data.iterrows():
+                date_str = pd.to_datetime(row['date']).strftime('%Y-%m-%d')
+                indicator_value = indicator_series.iloc[idx]
+                
+                if pd.isna(indicator_value):
+                    result_dict[date_str] = "N/A"
+                else:
+                    result_dict[date_str] = f"{indicator_value:.4f}"
+            
+            return result_dict
+        else:
+            raise ValueError(f"Indicator {indicator} not found in calculated indicators")
+    
+    else:
+        # Use stockstats for legacy indicators
+        from stockstats import wrap
         
         df = wrap(data)
-        df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
-    
-    # Calculate the indicator for all rows at once
-    df[indicator]  # This triggers stockstats to calculate the indicator
-    
-    # Create a dictionary mapping date strings to indicator values
-    result_dict = {}
-    for _, row in df.iterrows():
-        date_str = row["Date"]
-        indicator_value = row[indicator]
+        if 'date' in df.columns:
+            df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
         
-        # Handle NaN/None values
-        if pd.isna(indicator_value):
-            result_dict[date_str] = "N/A"
-        else:
-            result_dict[date_str] = str(indicator_value)
-    
-    return result_dict
+        # Calculate the indicator for all rows at once
+        df[indicator]  # This triggers stockstats to calculate the indicator
+        
+        # Create a dictionary mapping date strings to indicator values
+        result_dict = {}
+        for _, row in df.iterrows():
+            date_str = row["date"] if "date" in row else row.name
+            indicator_value = row[indicator]
+            
+            # Handle NaN/None values
+            if pd.isna(indicator_value):
+                result_dict[date_str] = "N/A"
+            else:
+                result_dict[date_str] = str(indicator_value)
+        
+        return result_dict
 
 
 def get_stockstats_indicator(

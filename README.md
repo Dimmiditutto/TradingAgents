@@ -126,7 +126,7 @@ export GOOGLE_API_KEY=...          # Google (Gemini)
 export ANTHROPIC_API_KEY=...       # Anthropic (Claude)
 export XAI_API_KEY=...             # xAI (Grok)
 export OPENROUTER_API_KEY=...      # OpenRouter
-export ALPHA_VANTAGE_API_KEY=...   # Alpha Vantage
+export ALPHA_VANTAGE_API_KEY=...   # Alpha Vantage (for financial data)
 ```
 
 For local models, configure Ollama with `llm_provider: "ollama"` in your config.
@@ -135,6 +135,32 @@ Alternatively, copy `.env.example` to `.env` and fill in your keys:
 ```bash
 cp .env.example .env
 ```
+
+### Data Sources
+
+TradingAgents supports multiple financial data vendors:
+
+- **yfinance** (default) - Free, no API key required
+- **alpha_vantage** - REST API requiring ALPHA_VANTAGE_API_KEY
+- **mcp_alpha_vantage** - Alpha Vantage via MCP (Model Context Protocol) for enhanced performance
+
+Configure in `tradingagents/default_config.py`:
+```python
+"data_vendors": {
+    "core_stock_apis": "yfinance",           # or "mcp_alpha_vantage"
+    "technical_indicators": "yfinance",      # or "mcp_alpha_vantage"  
+    "fundamental_data": "yfinance",          # or "mcp_alpha_vantage"
+    "news_data": "yfinance",                 # or "mcp_alpha_vantage"
+}
+```
+
+**Alpha Vantage MCP Benefits:**
+- ✅ Standardized tool interface for LLMs
+- ✅ Automatic rate limiting and caching
+- ✅ Better error handling and reliability
+- ✅ Server-managed request throttling
+
+See [ALPHA_VANTAGE_MCP_SETUP.md](ALPHA_VANTAGE_MCP_SETUP.md) for detailed setup instructions.
 
 ### CLI Usage
 

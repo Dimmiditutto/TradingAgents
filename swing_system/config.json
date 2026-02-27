@@ -1,0 +1,42 @@
+{
+  "_comment": "Configurazione MTF Swing System — modifica questi valori",
+
+  "api_key": "INSERISCI_QUI_LA_TUA_KEY_ALPHA_VANTAGE",
+
+  "sectors": ["Technology", "Financials", "Healthcare", "Industrials", "ConsDiscretary"],
+
+  "watchlist": null,
+
+  "min_score": 65,
+
+  "max_hold_days": 7,
+
+  "weights": {
+    "structure":  0.30,
+    "trend":      0.25,
+    "momentum":   0.25,
+    "volatility": 0.10,
+    "volume":     0.10
+  },
+
+  "filters": {
+    "require_weekly_uptrend":   true,
+    "require_above_200sma":     true,
+    "require_adx_min":          20,
+    "require_supertrend_bull":  true,
+    "max_pct_from_200sma":      25.0,
+    "min_atr_pct":              0.5,
+    "max_atr_pct":              8.0
+  },
+
+  "trade": {
+    "stop_atr_mult":    1.5,
+    "target1_atr_mult": 2.0,
+    "target2_atr_mult": 3.5
+  },
+
+  "cache_days": 1,
+  "rate_limit_sleep": 12,
+  "min_history_days": 252,
+  "full_output_threshold": 30
+}

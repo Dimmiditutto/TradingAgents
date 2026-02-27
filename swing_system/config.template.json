@@ -1,0 +1,36 @@
+{
+  "_note": "Rinomina questo file in config.json e inserisci la tua API key Alpha Vantage.",
+
+  "api_key": "INSERISCI_QUI_LA_TUA_API_KEY",
+
+  "watchlist": [
+    "AAPL", "MSFT", "NVDA", "META", "GOOGL",
+    "JPM",  "AMZN", "TSLA", "AMD",  "AVGO",
+    "LLY",  "UNH",  "HD",   "GS",   "NKE"
+  ],
+
+  "min_score": 65,
+  "max_hold_days": 7,
+  "risk_per_trade": 1.0,
+
+  "cache_days": 1,
+  "rate_limit_sleep": 12,
+  "min_history_days": 252,
+  "full_output_threshold": 30,
+
+  "filters": {
+    "require_weekly_uptrend":  true,
+    "require_above_200sma":    true,
+    "require_adx_min":         20,
+    "require_supertrend_bull": true,
+    "max_pct_from_200sma":     25,
+    "min_atr_pct":             0.5,
+    "max_atr_pct":             6.0
+  },
+
+  "trade": {
+    "stop_atr_mult":    1.5,
+    "target1_atr_mult": 2.0,
+    "target2_atr_mult": 3.5
+  }
+}
